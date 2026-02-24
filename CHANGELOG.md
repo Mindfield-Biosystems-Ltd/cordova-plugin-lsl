@@ -25,6 +25,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Published to npm as [cordova-plugin-lsl](https://www.npmjs.com/package/cordova-plugin-lsl)
 - GitHub Release [v1.0.0](https://github.com/Mindfield-Biosystems-Ltd/cordova-plugin-lsl/releases/tag/v1.0.0)
 
+## [1.1.0] - 2026-02-24
+
+### Fixed (Critical)
+- **Library version parsing** - `lsl_library_version()` returns `major*100+minor` (2-part), was incorrectly parsed as 3-part. Version 1.17 was displayed as "1.1.7" instead of "1.17" (Android + iOS)
+- **Push sample return values** - All `lsl_push_sample_*t()` return `int32_t` error codes, JNI bridge declared them as `void`. Now correctly returns and can propagate errors (lsl_jni.c)
+- **getLocalClock cross-platform type mismatch** - Android returned String, iOS returned Double. Both now return consistent JSON `{timestamp: double}`, JS layer extracts the number
+- **hasConsumers/waitForConsumers type mismatch** - Android returned int (0/1), iOS returned boolean. JS layer now normalizes to boolean on both platforms
+- **iOS null pointer crash in getWifiIPAddress** - `ifa_addr` can be NULL for some network interfaces, was dereferenced without check
+
+### Fixed (Non-Critical)
+- **JNI local reference leak in string push** - `GetObjectArrayElement` was called twice per element in push/release loops, leaking 2N local refs per call. Refactored to store and reuse jstring references
+- **JNI OOM crash risk** - Added NULL checks after all `Get*ArrayElements` calls (return -4 on failure instead of segfault)
+- **Android push/destroy race condition** - Added `synchronized(wrapper)` blocks and `isDestroyed()` checks to prevent use-after-free when pushing and destroying concurrently
+
+### Changed
+- **pushChunk performance** - Replaced sample-by-sample loop with native `lsl_push_chunk_*t()` calls. Flattens 2D array into 1D buffer for a single JNI/liblsl call. ~10-100x faster for high-rate streams (Android + iOS)
+- TypeScript definitions now accept `string[]` for string channel format in `pushSample` and `pushChunk`
+- Version string format changed from "X.Y.Z" to "X.Y" to match liblsl's 2-part encoding
+
+### Added
+- 5 new JNI functions for native chunk push: `lsl_push_chunk_f/d/i/s/c`
+- iOS `pushChunkNative:` method using native `lsl_push_chunk_*t()` calls
+- LSL specification review report (`docs/LSL-REVIEW-REPORT.md`)
+- Complete LSL documentation archive (`docs/LSL-DOCUMENTATION/`, 25 pages)
+
 ## [1.0.0] - 2026-02-24
 
 ### Added
@@ -66,5 +91,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - iOS 13.0+ (tested through iOS 26)
 - Xcode 15+ (compatible with Xcode 26)
 
-[Unreleased]: https://github.com/Mindfield-Biosystems-Ltd/cordova-plugin-lsl/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/Mindfield-Biosystems-Ltd/cordova-plugin-lsl/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/Mindfield-Biosystems-Ltd/cordova-plugin-lsl/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/Mindfield-Biosystems-Ltd/cordova-plugin-lsl/releases/tag/v1.0.0

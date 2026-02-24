@@ -225,7 +225,10 @@ var LSL = {
             var err = validateString(outletId, 'outletId');
             if (err) return reject('hasConsumers: ' + err);
 
-            exec(resolve, reject, SERVICE, 'hasConsumers', [outletId]);
+            exec(function(result) {
+                // Normalize: Android returns int (0/1), iOS returns boolean
+                resolve(!!result);
+            }, reject, SERVICE, 'hasConsumers', [outletId]);
         });
     },
 
@@ -244,7 +247,10 @@ var LSL = {
             err = validatePositiveNumber(timeout, 'timeout');
             if (err) return reject('waitForConsumers: ' + err);
 
-            exec(resolve, reject, SERVICE, 'waitForConsumers', [{
+            exec(function(result) {
+                // Normalize: Android returns int (0/1), iOS returns boolean
+                resolve(!!result);
+            }, reject, SERVICE, 'waitForConsumers', [{
                 outletId: outletId,
                 timeout: timeout
             }]);
@@ -288,14 +294,23 @@ var LSL = {
      */
     getLocalClock: function() {
         return new Promise(function(resolve, reject) {
-            exec(resolve, reject, SERVICE, 'getLocalClock', []);
+            exec(function(result) {
+                // Native returns {timestamp: double} for cross-platform consistency
+                if (result && typeof result === 'object' && typeof result.timestamp === 'number') {
+                    resolve(result.timestamp);
+                } else if (typeof result === 'number') {
+                    resolve(result);
+                } else {
+                    resolve(parseFloat(result));
+                }
+            }, reject, SERVICE, 'getLocalClock', []);
         });
     },
 
     /**
      * Get the version of the underlying liblsl library.
      *
-     * @returns {Promise<string>} Version string (e.g. "1.17.5").
+     * @returns {Promise<string>} Version string (e.g. "1.17").
      */
     getLibraryVersion: function() {
         return new Promise(function(resolve, reject) {

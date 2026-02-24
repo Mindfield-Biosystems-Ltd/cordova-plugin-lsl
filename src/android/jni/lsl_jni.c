@@ -88,58 +88,120 @@ static void native_lsl_destroy_outlet(JNIEnv *env, jclass cls, jlong outlet) {
     }
 }
 
-static void native_lsl_push_sample_f(JNIEnv *env, jclass cls,
+static jint native_lsl_push_sample_f(JNIEnv *env, jclass cls,
         jlong outlet, jfloatArray jdata, jdouble timestamp) {
     jfloat *data = (*env)->GetFloatArrayElements(env, jdata, NULL);
-    lsl_push_sample_ft(JLONG_TO_PTR(outlet, lsl_outlet), data, (double)timestamp);
+    if (!data) return -4; /* lsl_internal_error */
+    int32_t rc = lsl_push_sample_ft(JLONG_TO_PTR(outlet, lsl_outlet), data, (double)timestamp);
     (*env)->ReleaseFloatArrayElements(env, jdata, data, JNI_ABORT);
+    return (jint)rc;
 }
 
-static void native_lsl_push_sample_d(JNIEnv *env, jclass cls,
+static jint native_lsl_push_sample_d(JNIEnv *env, jclass cls,
         jlong outlet, jdoubleArray jdata, jdouble timestamp) {
     jdouble *data = (*env)->GetDoubleArrayElements(env, jdata, NULL);
-    lsl_push_sample_dt(JLONG_TO_PTR(outlet, lsl_outlet), data, (double)timestamp);
+    if (!data) return -4;
+    int32_t rc = lsl_push_sample_dt(JLONG_TO_PTR(outlet, lsl_outlet), data, (double)timestamp);
     (*env)->ReleaseDoubleArrayElements(env, jdata, data, JNI_ABORT);
+    return (jint)rc;
 }
 
-static void native_lsl_push_sample_i(JNIEnv *env, jclass cls,
+static jint native_lsl_push_sample_i(JNIEnv *env, jclass cls,
         jlong outlet, jintArray jdata, jdouble timestamp) {
     jint *data = (*env)->GetIntArrayElements(env, jdata, NULL);
-    lsl_push_sample_it(JLONG_TO_PTR(outlet, lsl_outlet), (const int32_t *)data, (double)timestamp);
+    if (!data) return -4;
+    int32_t rc = lsl_push_sample_it(JLONG_TO_PTR(outlet, lsl_outlet), (const int32_t *)data, (double)timestamp);
     (*env)->ReleaseIntArrayElements(env, jdata, data, JNI_ABORT);
+    return (jint)rc;
 }
 
-static void native_lsl_push_sample_s(JNIEnv *env, jclass cls,
+static jint native_lsl_push_sample_s(JNIEnv *env, jclass cls,
         jlong outlet, jshortArray jdata, jdouble timestamp) {
     jshort *data = (*env)->GetShortArrayElements(env, jdata, NULL);
-    lsl_push_sample_st(JLONG_TO_PTR(outlet, lsl_outlet), (const int16_t *)data, (double)timestamp);
+    if (!data) return -4;
+    int32_t rc = lsl_push_sample_st(JLONG_TO_PTR(outlet, lsl_outlet), (const int16_t *)data, (double)timestamp);
     (*env)->ReleaseShortArrayElements(env, jdata, data, JNI_ABORT);
+    return (jint)rc;
 }
 
-static void native_lsl_push_sample_c(JNIEnv *env, jclass cls,
+static jint native_lsl_push_sample_c(JNIEnv *env, jclass cls,
         jlong outlet, jbyteArray jdata, jdouble timestamp) {
     jbyte *data = (*env)->GetByteArrayElements(env, jdata, NULL);
-    lsl_push_sample_ct(JLONG_TO_PTR(outlet, lsl_outlet), (const char *)data, (double)timestamp);
+    if (!data) return -4;
+    int32_t rc = lsl_push_sample_ct(JLONG_TO_PTR(outlet, lsl_outlet), (const char *)data, (double)timestamp);
     (*env)->ReleaseByteArrayElements(env, jdata, data, JNI_ABORT);
+    return (jint)rc;
 }
 
-static void native_lsl_push_sample_str(JNIEnv *env, jclass cls,
+static jint native_lsl_push_sample_str(JNIEnv *env, jclass cls,
         jlong outlet, jobjectArray jdata, jdouble timestamp) {
     int len = (*env)->GetArrayLength(env, jdata);
     const char **strs = (const char **)malloc(len * sizeof(const char *));
+    if (!strs) return -4;
+    jstring *jstrs = (jstring *)malloc(len * sizeof(jstring));
+    if (!jstrs) { free(strs); return -4; }
 
     for (int i = 0; i < len; i++) {
-        jstring jstr = (jstring)(*env)->GetObjectArrayElement(env, jdata, i);
-        strs[i] = (*env)->GetStringUTFChars(env, jstr, NULL);
+        jstrs[i] = (jstring)(*env)->GetObjectArrayElement(env, jdata, i);
+        strs[i] = (*env)->GetStringUTFChars(env, jstrs[i], NULL);
     }
 
-    lsl_push_sample_strt(JLONG_TO_PTR(outlet, lsl_outlet), strs, (double)timestamp);
+    int32_t rc = lsl_push_sample_strt(JLONG_TO_PTR(outlet, lsl_outlet), strs, (double)timestamp);
 
     for (int i = 0; i < len; i++) {
-        jstring jstr = (jstring)(*env)->GetObjectArrayElement(env, jdata, i);
-        (*env)->ReleaseStringUTFChars(env, jstr, strs[i]);
+        (*env)->ReleaseStringUTFChars(env, jstrs[i], strs[i]);
+        (*env)->DeleteLocalRef(env, jstrs[i]);
     }
+    free(jstrs);
     free(strs);
+    return (jint)rc;
+}
+
+/* ======================== Push Chunk (native batch) ======================== */
+
+static jint native_lsl_push_chunk_f(JNIEnv *env, jclass cls,
+        jlong outlet, jfloatArray jdata, jint dataElements, jdouble timestamp) {
+    jfloat *data = (*env)->GetFloatArrayElements(env, jdata, NULL);
+    if (!data) return -4;
+    int32_t rc = lsl_push_chunk_ft(JLONG_TO_PTR(outlet, lsl_outlet), data, (unsigned long)dataElements, (double)timestamp);
+    (*env)->ReleaseFloatArrayElements(env, jdata, data, JNI_ABORT);
+    return (jint)rc;
+}
+
+static jint native_lsl_push_chunk_d(JNIEnv *env, jclass cls,
+        jlong outlet, jdoubleArray jdata, jint dataElements, jdouble timestamp) {
+    jdouble *data = (*env)->GetDoubleArrayElements(env, jdata, NULL);
+    if (!data) return -4;
+    int32_t rc = lsl_push_chunk_dt(JLONG_TO_PTR(outlet, lsl_outlet), data, (unsigned long)dataElements, (double)timestamp);
+    (*env)->ReleaseDoubleArrayElements(env, jdata, data, JNI_ABORT);
+    return (jint)rc;
+}
+
+static jint native_lsl_push_chunk_i(JNIEnv *env, jclass cls,
+        jlong outlet, jintArray jdata, jint dataElements, jdouble timestamp) {
+    jint *data = (*env)->GetIntArrayElements(env, jdata, NULL);
+    if (!data) return -4;
+    int32_t rc = lsl_push_chunk_it(JLONG_TO_PTR(outlet, lsl_outlet), (const int32_t *)data, (unsigned long)dataElements, (double)timestamp);
+    (*env)->ReleaseIntArrayElements(env, jdata, data, JNI_ABORT);
+    return (jint)rc;
+}
+
+static jint native_lsl_push_chunk_s(JNIEnv *env, jclass cls,
+        jlong outlet, jshortArray jdata, jint dataElements, jdouble timestamp) {
+    jshort *data = (*env)->GetShortArrayElements(env, jdata, NULL);
+    if (!data) return -4;
+    int32_t rc = lsl_push_chunk_st(JLONG_TO_PTR(outlet, lsl_outlet), (const int16_t *)data, (unsigned long)dataElements, (double)timestamp);
+    (*env)->ReleaseShortArrayElements(env, jdata, data, JNI_ABORT);
+    return (jint)rc;
+}
+
+static jint native_lsl_push_chunk_c(JNIEnv *env, jclass cls,
+        jlong outlet, jbyteArray jdata, jint dataElements, jdouble timestamp) {
+    jbyte *data = (*env)->GetByteArrayElements(env, jdata, NULL);
+    if (!data) return -4;
+    int32_t rc = lsl_push_chunk_ct(JLONG_TO_PTR(outlet, lsl_outlet), (const char *)data, (unsigned long)dataElements, (double)timestamp);
+    (*env)->ReleaseByteArrayElements(env, jdata, data, JNI_ABORT);
+    return (jint)rc;
 }
 
 static jint native_lsl_have_consumers(JNIEnv *env, jclass cls, jlong outlet) {
@@ -183,18 +245,28 @@ static JNINativeMethod pluginMethods[] = {
         (void *)native_lsl_create_outlet},
     {"lsl_destroy_outlet",     "(J)V",
         (void *)native_lsl_destroy_outlet},
-    {"lsl_push_sample_f",      "(J[FD)V",
+    {"lsl_push_sample_f",      "(J[FD)I",
         (void *)native_lsl_push_sample_f},
-    {"lsl_push_sample_d",      "(J[DD)V",
+    {"lsl_push_sample_d",      "(J[DD)I",
         (void *)native_lsl_push_sample_d},
-    {"lsl_push_sample_i",      "(J[ID)V",
+    {"lsl_push_sample_i",      "(J[ID)I",
         (void *)native_lsl_push_sample_i},
-    {"lsl_push_sample_s",      "(J[SD)V",
+    {"lsl_push_sample_s",      "(J[SD)I",
         (void *)native_lsl_push_sample_s},
-    {"lsl_push_sample_c",      "(J[BD)V",
+    {"lsl_push_sample_c",      "(J[BD)I",
         (void *)native_lsl_push_sample_c},
-    {"lsl_push_sample_str",    "(J[Ljava/lang/String;D)V",
+    {"lsl_push_sample_str",    "(J[Ljava/lang/String;D)I",
         (void *)native_lsl_push_sample_str},
+    {"lsl_push_chunk_f",       "(J[FID)I",
+        (void *)native_lsl_push_chunk_f},
+    {"lsl_push_chunk_d",       "(J[DID)I",
+        (void *)native_lsl_push_chunk_d},
+    {"lsl_push_chunk_i",       "(J[IID)I",
+        (void *)native_lsl_push_chunk_i},
+    {"lsl_push_chunk_s",       "(J[SID)I",
+        (void *)native_lsl_push_chunk_s},
+    {"lsl_push_chunk_c",       "(J[BID)I",
+        (void *)native_lsl_push_chunk_c},
     {"lsl_have_consumers",     "(J)I",
         (void *)native_lsl_have_consumers},
     {"lsl_wait_for_consumers", "(JD)I",

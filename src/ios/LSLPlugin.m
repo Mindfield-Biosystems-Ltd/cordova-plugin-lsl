@@ -280,17 +280,23 @@ static int parseChannelFormat(NSString *format) {
             return;
         }
 
-        for (NSUInteger i = 0; i < chunk.count; i++) {
+        int cc = wrapper.channelCount;
+        NSUInteger numSamples = chunk.count;
+
+        // Validate all samples first
+        for (NSUInteger i = 0; i < numSamples; i++) {
             NSArray *sample = chunk[i];
-            if (![sample isKindOfClass:[NSArray class]] || (int)sample.count != wrapper.channelCount) {
+            if (![sample isKindOfClass:[NSArray class]] || (int)sample.count != cc) {
                 CDVPluginResult *result = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR
                                                            messageAsString:[NSString stringWithFormat:
                                                                @"Sample %lu has invalid length.", (unsigned long)i]];
                 [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
                 return;
             }
-            [self pushSampleNative:wrapper data:sample timestamp:0.0];
         }
+
+        // Use native push_chunk for performance (single liblsl call)
+        [self pushChunkNative:wrapper chunk:chunk numSamples:numSamples];
 
         CDVPluginResult *result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
         [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
@@ -387,8 +393,9 @@ static int parseChannelFormat(NSString *format) {
 - (void)getLocalClock:(CDVInvokedUrlCommand *)command {
     [self.commandDelegate runInBackground:^{
         double clock = lsl_local_clock();
+        NSDictionary *dict = @{@"timestamp": @(clock)};
         CDVPluginResult *result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
-                                                    messageAsDouble:clock];
+                                                messageAsDictionary:dict];
         [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
     }];
 }
@@ -397,9 +404,8 @@ static int parseChannelFormat(NSString *format) {
     [self.commandDelegate runInBackground:^{
         int version = lsl_library_version();
         int major = version / 100;
-        int minor = (version % 100) / 10;
-        int patch = version % 10;
-        NSString *versionStr = [NSString stringWithFormat:@"%d.%d.%d", major, minor, patch];
+        int minor = version % 100;
+        NSString *versionStr = [NSString stringWithFormat:@"%d.%d", major, minor];
 
         CDVPluginResult *result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
                                                     messageAsString:versionStr];
@@ -449,6 +455,89 @@ static int parseChannelFormat(NSString *format) {
 
     if (allOutlets.count > 0) {
         NSLog(@"[LSLPlugin] Destroyed %lu outlet(s)", (unsigned long)allOutlets.count);
+    }
+}
+
+/**
+ * Push a chunk of samples using native lsl_push_chunk_* for performance.
+ * Flattens the 2D array into a 1D C buffer and pushes in one liblsl call.
+ * Falls back to sample-by-sample for string format.
+ */
+- (void)pushChunkNative:(LSLOutletWrapper *)wrapper chunk:(NSArray *)chunk numSamples:(NSUInteger)numSamples {
+    int cc = wrapper.channelCount;
+    unsigned long totalElements = numSamples * cc;
+
+    switch (wrapper.channelFormat) {
+        case cft_float32: {
+            float *flat = (float *)malloc(totalElements * sizeof(float));
+            for (NSUInteger i = 0; i < numSamples; i++) {
+                NSArray *sample = chunk[i];
+                for (int j = 0; j < cc; j++) {
+                    flat[i * cc + j] = (float)[sample[j] doubleValue];
+                }
+            }
+            lsl_push_chunk_ft(wrapper.outlet, flat, totalElements, 0.0);
+            free(flat);
+            break;
+        }
+        case cft_double64: {
+            double *flat = (double *)malloc(totalElements * sizeof(double));
+            for (NSUInteger i = 0; i < numSamples; i++) {
+                NSArray *sample = chunk[i];
+                for (int j = 0; j < cc; j++) {
+                    flat[i * cc + j] = [sample[j] doubleValue];
+                }
+            }
+            lsl_push_chunk_dt(wrapper.outlet, flat, totalElements, 0.0);
+            free(flat);
+            break;
+        }
+        case cft_int32: {
+            int32_t *flat = (int32_t *)malloc(totalElements * sizeof(int32_t));
+            for (NSUInteger i = 0; i < numSamples; i++) {
+                NSArray *sample = chunk[i];
+                for (int j = 0; j < cc; j++) {
+                    flat[i * cc + j] = (int32_t)[sample[j] doubleValue];
+                }
+            }
+            lsl_push_chunk_it(wrapper.outlet, flat, totalElements, 0.0);
+            free(flat);
+            break;
+        }
+        case cft_int16: {
+            int16_t *flat = (int16_t *)malloc(totalElements * sizeof(int16_t));
+            for (NSUInteger i = 0; i < numSamples; i++) {
+                NSArray *sample = chunk[i];
+                for (int j = 0; j < cc; j++) {
+                    flat[i * cc + j] = (int16_t)[sample[j] doubleValue];
+                }
+            }
+            lsl_push_chunk_st(wrapper.outlet, flat, totalElements, 0.0);
+            free(flat);
+            break;
+        }
+        case cft_int8: {
+            char *flat = (char *)malloc(totalElements * sizeof(char));
+            for (NSUInteger i = 0; i < numSamples; i++) {
+                NSArray *sample = chunk[i];
+                for (int j = 0; j < cc; j++) {
+                    flat[i * cc + j] = (char)[sample[j] doubleValue];
+                }
+            }
+            lsl_push_chunk_ct(wrapper.outlet, flat, totalElements, 0.0);
+            free(flat);
+            break;
+        }
+        case cft_string: {
+            // String format: fall back to sample-by-sample
+            for (NSUInteger i = 0; i < numSamples; i++) {
+                [self pushSampleNative:wrapper data:chunk[i] timestamp:0.0];
+            }
+            break;
+        }
+        default:
+            NSLog(@"[LSLPlugin] Unsupported channel format for chunk: %d", wrapper.channelFormat);
+            break;
     }
 }
 
@@ -537,8 +626,8 @@ static int parseChannelFormat(NSString *format) {
 
     addr = interfaces;
     while (addr != NULL) {
-        // Check for IPv4 on Wi-Fi interface (en0)
-        if (addr->ifa_addr->sa_family == AF_INET) {
+        // Check for IPv4 on Wi-Fi interface (en0); ifa_addr can be NULL
+        if (addr->ifa_addr != NULL && addr->ifa_addr->sa_family == AF_INET) {
             NSString *ifName = [NSString stringWithUTF8String:addr->ifa_name];
             if ([ifName isEqualToString:@"en0"]) {
                 struct sockaddr_in *sockAddr = (struct sockaddr_in *)addr->ifa_addr;

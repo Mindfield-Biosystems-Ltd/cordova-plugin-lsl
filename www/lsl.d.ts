@@ -66,7 +66,7 @@ export interface LSLPlugin {
      *
      * WARNING: Do NOT use Date.now() for timestamps. Only use values from getLocalClock().
      */
-    pushSample(outletId: string, data: number[], timestamp?: number): Promise<void>;
+    pushSample(outletId: string, data: number[] | string[], timestamp?: number): Promise<void>;
 
     /**
      * Push a chunk of samples to an outlet (more efficient than multiple pushSample calls).
@@ -74,7 +74,7 @@ export interface LSLPlugin {
      * @param outletId - The outlet ID returned by createOutlet.
      * @param data - Array of sample arrays.
      */
-    pushChunk(outletId: string, data: number[][]): Promise<void>;
+    pushChunk(outletId: string, data: number[][] | string[][]): Promise<void>;
 
     /**
      * Check if any consumers (e.g. LabRecorder) are currently connected to the outlet.
@@ -116,7 +116,7 @@ export interface LSLPlugin {
 
     /**
      * Get the version of the underlying liblsl library.
-     * @returns Version string (e.g. "1.17.5").
+     * @returns Version string (e.g. "1.17").
      */
     getLibraryVersion(): Promise<string>;
 

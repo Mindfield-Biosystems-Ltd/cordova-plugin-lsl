@@ -77,12 +77,17 @@ public class LSLPlugin extends CordovaPlugin {
     // Outlet
     private static native long lsl_create_outlet(long info, int chunkSize, int maxBuffered);
     private static native void lsl_destroy_outlet(long outlet);
-    private static native void lsl_push_sample_f(long outlet, float[] data, double timestamp);
-    private static native void lsl_push_sample_d(long outlet, double[] data, double timestamp);
-    private static native void lsl_push_sample_i(long outlet, int[] data, double timestamp);
-    private static native void lsl_push_sample_s(long outlet, short[] data, double timestamp);
-    private static native void lsl_push_sample_c(long outlet, byte[] data, double timestamp);
-    private static native void lsl_push_sample_str(long outlet, String[] data, double timestamp);
+    private static native int lsl_push_sample_f(long outlet, float[] data, double timestamp);
+    private static native int lsl_push_sample_d(long outlet, double[] data, double timestamp);
+    private static native int lsl_push_sample_i(long outlet, int[] data, double timestamp);
+    private static native int lsl_push_sample_s(long outlet, short[] data, double timestamp);
+    private static native int lsl_push_sample_c(long outlet, byte[] data, double timestamp);
+    private static native int lsl_push_sample_str(long outlet, String[] data, double timestamp);
+    private static native int lsl_push_chunk_f(long outlet, float[] data, int dataElements, double timestamp);
+    private static native int lsl_push_chunk_d(long outlet, double[] data, int dataElements, double timestamp);
+    private static native int lsl_push_chunk_i(long outlet, int[] data, int dataElements, double timestamp);
+    private static native int lsl_push_chunk_s(long outlet, short[] data, int dataElements, double timestamp);
+    private static native int lsl_push_chunk_c(long outlet, byte[] data, int dataElements, double timestamp);
     private static native int lsl_have_consumers(long outlet);
     private static native int lsl_wait_for_consumers(long outlet, double timeout);
 
@@ -248,8 +253,8 @@ public class LSLPlugin extends CordovaPlugin {
                     double timestamp = args.optDouble("timestamp", 0.0);
 
                     LSLOutletWrapper wrapper = outlets.get(outletId);
-                    if (wrapper == null) {
-                        callbackContext.error("Outlet not found: " + outletId);
+                    if (wrapper == null || wrapper.isDestroyed()) {
+                        callbackContext.error("Outlet not found or destroyed: " + outletId);
                         return;
                     }
 
@@ -259,8 +264,14 @@ public class LSLPlugin extends CordovaPlugin {
                         return;
                     }
 
-                    pushSampleNative(wrapper.outletPtr, wrapper.channelFormat,
-                            wrapper.channelCount, dataArr, timestamp);
+                    synchronized (wrapper) {
+                        if (wrapper.isDestroyed()) {
+                            callbackContext.error("Outlet destroyed during push: " + outletId);
+                            return;
+                        }
+                        pushSampleNative(wrapper.outletPtr, wrapper.channelFormat,
+                                wrapper.channelCount, dataArr, timestamp);
+                    }
 
                     callbackContext.success();
 
@@ -283,20 +294,31 @@ public class LSLPlugin extends CordovaPlugin {
                     JSONArray chunk = args.getJSONArray("data");
 
                     LSLOutletWrapper wrapper = outlets.get(outletId);
-                    if (wrapper == null) {
-                        callbackContext.error("Outlet not found: " + outletId);
+                    if (wrapper == null || wrapper.isDestroyed()) {
+                        callbackContext.error("Outlet not found or destroyed: " + outletId);
                         return;
                     }
 
-                    for (int i = 0; i < chunk.length(); i++) {
+                    int numSamples = chunk.length();
+                    int cc = wrapper.channelCount;
+
+                    // Validate all samples first
+                    for (int i = 0; i < numSamples; i++) {
                         JSONArray sample = chunk.getJSONArray(i);
-                        if (sample.length() != wrapper.channelCount) {
+                        if (sample.length() != cc) {
                             callbackContext.error("Sample " + i + " length (" + sample.length()
-                                    + ") does not match channelCount (" + wrapper.channelCount + ").");
+                                    + ") does not match channelCount (" + cc + ").");
                             return;
                         }
-                        pushSampleNative(wrapper.outletPtr, wrapper.channelFormat,
-                                wrapper.channelCount, sample, 0.0);
+                    }
+
+                    // Use native push_chunk for performance (single JNI call)
+                    synchronized (wrapper) {
+                        if (wrapper.isDestroyed()) {
+                            callbackContext.error("Outlet destroyed during push: " + outletId);
+                            return;
+                        }
+                        pushChunkNative(wrapper.outletPtr, wrapper.channelFormat, cc, chunk, numSamples);
                     }
 
                     callbackContext.success();
@@ -317,8 +339,8 @@ public class LSLPlugin extends CordovaPlugin {
             public void run() {
                 try {
                     LSLOutletWrapper wrapper = outlets.get(outletId);
-                    if (wrapper == null) {
-                        callbackContext.error("Outlet not found: " + outletId);
+                    if (wrapper == null || wrapper.isDestroyed()) {
+                        callbackContext.error("Outlet not found or destroyed: " + outletId);
                         return;
                     }
 
@@ -342,8 +364,8 @@ public class LSLPlugin extends CordovaPlugin {
                     double timeout = args.getDouble("timeout");
 
                     LSLOutletWrapper wrapper = outlets.get(outletId);
-                    if (wrapper == null) {
-                        callbackContext.error("Outlet not found: " + outletId);
+                    if (wrapper == null || wrapper.isDestroyed()) {
+                        callbackContext.error("Outlet not found or destroyed: " + outletId);
                         return;
                     }
 
@@ -402,7 +424,10 @@ public class LSLPlugin extends CordovaPlugin {
             public void run() {
                 try {
                     double clock = lsl_local_clock();
-                    callbackContext.success(String.valueOf(clock));
+                    // Return as JSON with double value for cross-platform consistency
+                    JSONObject result = new JSONObject();
+                    result.put("timestamp", clock);
+                    callbackContext.success(result);
                 } catch (Exception e) {
                     callbackContext.error("getLocalClock failed: " + e.getMessage());
                 }
@@ -417,9 +442,8 @@ public class LSLPlugin extends CordovaPlugin {
                 try {
                     int version = lsl_library_version();
                     int major = version / 100;
-                    int minor = (version % 100) / 10;
-                    int patch = version % 10;
-                    callbackContext.success(major + "." + minor + "." + patch);
+                    int minor = version % 100;
+                    callbackContext.success(major + "." + minor);
                 } catch (Exception e) {
                     callbackContext.error("getLibraryVersion failed: " + e.getMessage());
                 }
@@ -548,6 +572,89 @@ public class LSLPlugin extends CordovaPlugin {
                     sample[i] = data.getString(i);
                 }
                 lsl_push_sample_str(outletPtr, sample, timestamp);
+                break;
+            }
+            default:
+                throw new IllegalArgumentException("Unsupported channel format: " + channelFormat);
+        }
+    }
+
+    /**
+     * Push a chunk of samples using native lsl_push_chunk_* for performance.
+     * Flattens the 2D JSON array into a 1D native array and pushes in one JNI call.
+     * Falls back to sample-by-sample for string format.
+     */
+    private void pushChunkNative(long outletPtr, int channelFormat, int channelCount,
+            JSONArray chunk, int numSamples) throws JSONException {
+
+        int totalElements = numSamples * channelCount;
+
+        switch (channelFormat) {
+            case LSL_FORMAT_FLOAT32: {
+                float[] flat = new float[totalElements];
+                for (int i = 0; i < numSamples; i++) {
+                    JSONArray sample = chunk.getJSONArray(i);
+                    for (int j = 0; j < channelCount; j++) {
+                        flat[i * channelCount + j] = (float) sample.getDouble(j);
+                    }
+                }
+                lsl_push_chunk_f(outletPtr, flat, totalElements, 0.0);
+                break;
+            }
+            case LSL_FORMAT_DOUBLE64: {
+                double[] flat = new double[totalElements];
+                for (int i = 0; i < numSamples; i++) {
+                    JSONArray sample = chunk.getJSONArray(i);
+                    for (int j = 0; j < channelCount; j++) {
+                        flat[i * channelCount + j] = sample.getDouble(j);
+                    }
+                }
+                lsl_push_chunk_d(outletPtr, flat, totalElements, 0.0);
+                break;
+            }
+            case LSL_FORMAT_INT32: {
+                int[] flat = new int[totalElements];
+                for (int i = 0; i < numSamples; i++) {
+                    JSONArray sample = chunk.getJSONArray(i);
+                    for (int j = 0; j < channelCount; j++) {
+                        flat[i * channelCount + j] = (int) sample.getDouble(j);
+                    }
+                }
+                lsl_push_chunk_i(outletPtr, flat, totalElements, 0.0);
+                break;
+            }
+            case LSL_FORMAT_INT16: {
+                short[] flat = new short[totalElements];
+                for (int i = 0; i < numSamples; i++) {
+                    JSONArray sample = chunk.getJSONArray(i);
+                    for (int j = 0; j < channelCount; j++) {
+                        flat[i * channelCount + j] = (short) sample.getDouble(j);
+                    }
+                }
+                lsl_push_chunk_s(outletPtr, flat, totalElements, 0.0);
+                break;
+            }
+            case LSL_FORMAT_INT8: {
+                byte[] flat = new byte[totalElements];
+                for (int i = 0; i < numSamples; i++) {
+                    JSONArray sample = chunk.getJSONArray(i);
+                    for (int j = 0; j < channelCount; j++) {
+                        flat[i * channelCount + j] = (byte) sample.getDouble(j);
+                    }
+                }
+                lsl_push_chunk_c(outletPtr, flat, totalElements, 0.0);
+                break;
+            }
+            case LSL_FORMAT_STRING: {
+                // String format: fall back to sample-by-sample (no flat chunk API for strings with mixed lengths)
+                for (int i = 0; i < numSamples; i++) {
+                    JSONArray sample = chunk.getJSONArray(i);
+                    String[] strs = new String[channelCount];
+                    for (int j = 0; j < channelCount; j++) {
+                        strs[j] = sample.getString(j);
+                    }
+                    lsl_push_sample_str(outletPtr, strs, 0.0);
+                }
                 break;
             }
             default:

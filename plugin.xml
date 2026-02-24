@@ -2,7 +2,7 @@
 <plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
         xmlns:android="http://schemas.android.com/apk/res/android"
         id="cordova-plugin-lsl"
-        version="1.0.0">
+        version="1.1.0">
 
     <name>LSL</name>
     <description>Lab Streaming Layer (LSL) plugin for Apache Cordova. Stream physiological biosignal data from mobile devices to LSL-compatible recording software.</description>
