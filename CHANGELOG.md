@@ -7,8 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Android CI: JNI bridge CMake now uses IMPORTED target with direct path to liblsl.so
+- iOS CI: Added missing `mkdir -p` for fat simulator framework directory
+
+### Changed
+- Bumped Jasmine from 5.x to 6.1.0 (Dependabot)
+- Bumped actions/checkout from v4 to v6 (Dependabot)
+- Bumped actions/setup-node from v4 to v6 (Dependabot)
+- Bumped actions/setup-java from v4 to v5 (Dependabot)
+- Added CI, Build Android, Build iOS status badges to README
+- Updated README iOS tested version to 26.x
+
 ### Pending
-- Pre-built liblsl binaries (awaiting CI build completion)
+- Download CI artifacts and commit pre-built binaries to repo
 - npm publish to registry
 
 ## [1.0.0] - 2026-02-24

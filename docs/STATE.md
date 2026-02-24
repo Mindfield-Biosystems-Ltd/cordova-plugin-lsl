@@ -8,7 +8,7 @@
 |-------|-------|
 | Version | 1.0.0 |
 | Release Date | 2026-02-24 |
-| Status | Released (binaries pending) |
+| Status | Released (CI builds green) |
 | npm | Not yet published |
 | GitHub | [Mindfield-Biosystems-Ltd/cordova-plugin-lsl](https://github.com/Mindfield-Biosystems-Ltd/cordova-plugin-lsl) |
 
@@ -20,7 +20,7 @@
 | cordova (engine) | >= 10.0.0 | 12.x | OK |
 | cordova-android | >= 14.0.0 | 14.0.0 | Up to date |
 | cordova-ios | >= 8.0.0 | 8.0.0 (2025-11-23) | Up to date |
-| Jasmine (dev) | ^5.1.0 | 5.x | Up to date |
+| Jasmine (dev) | ^6.1.0 | 6.x | Up to date (Dependabot) |
 
 ## Platform Compatibility
 
@@ -42,29 +42,29 @@
 | Unit Tests | Done | 77 specs, 0 failures |
 | Integration Tests | Done | 3 test files |
 | E2E Guides | Done | 2 markdown files |
-| CI (GitHub Actions) | Active | CI green, build workflows need tuning |
-| **Android binaries** | **Pending** | liblsl.so + liblsl_jni.so for arm64-v8a, armeabi-v7a, x86_64 |
-| **iOS binaries** | **Pending** | liblsl.xcframework for arm64 + simulators |
-| npm publish | Not started | After binaries are in place |
+| CI (GitHub Actions) | Green | CI, Android build, iOS build — all passing |
+| Android binaries | CI builds | liblsl.so + liblsl_jni.so for arm64-v8a, armeabi-v7a, x86_64 |
+| iOS binaries | CI builds | liblsl.xcframework for arm64 + simulators |
+| npm publish | Not started | After binaries are committed to repo |
 
 ## Pre-built Binary Status
 
-Binaries must be built via CI or locally. They are NOT in the repo yet.
+Binaries are built via GitHub Actions CI. They are NOT committed to the repo (built on-demand).
 
 ### Android (.so files)
 ```
 src/android/libs/
-  arm64-v8a/liblsl.so       ← MISSING (build via scripts/build-android.sh)
-  arm64-v8a/liblsl_jni.so   ← MISSING
-  armeabi-v7a/liblsl.so     ← MISSING
-  armeabi-v7a/liblsl_jni.so ← MISSING
-  x86_64/liblsl.so          ← MISSING
-  x86_64/liblsl_jni.so      ← MISSING
+  arm64-v8a/liblsl.so       ← CI builds ✓
+  arm64-v8a/liblsl_jni.so   ← CI builds ✓
+  armeabi-v7a/liblsl.so     ← CI builds ✓
+  armeabi-v7a/liblsl_jni.so ← CI builds ✓
+  x86_64/liblsl.so          ← CI builds ✓
+  x86_64/liblsl_jni.so      ← CI builds ✓
 ```
 
 ### iOS (.xcframework)
 ```
-src/ios/liblsl.xcframework/  ← MISSING (build via scripts/build-ios.sh on macOS)
+src/ios/liblsl.xcframework/  ← CI builds ✓
 ```
 
 ### How to Build
@@ -74,9 +74,8 @@ src/ios/liblsl.xcframework/  ← MISSING (build via scripts/build-ios.sh on macO
 
 ## Known Issues
 
-1. **CI Build Workflows:** Android and iOS build workflows need fine-tuning for NDK/Xcode setup on GitHub runners
-2. **No Pre-built Binaries:** Plugin cannot be installed without building liblsl first
-3. **No npm Package:** Not published to npm yet (blocked by binaries)
+1. **Binaries not in repo:** CI builds succeed but binaries need to be downloaded and committed
+2. **No npm Package:** Not published to npm yet (blocked by binaries in repo)
 
 ## iOS 26 Notes
 
@@ -89,10 +88,10 @@ src/ios/liblsl.xcframework/  ← MISSING (build via scripts/build-ios.sh on macO
 ## Roadmap
 
 ### v1.0.x (Patches)
-- [ ] Get CI builds working (Android + iOS)
-- [ ] Add pre-built binaries to repo
+- [x] Get CI builds working (Android + iOS) ✓
+- [ ] Download CI artifacts and commit binaries to repo
 - [ ] Publish to npm
-- [ ] Tag v1.0.0 release on GitHub
+- [ ] Create v1.0.0 GitHub Release with attached binaries
 
 ### v1.1.0 (Minor)
 - [ ] Add `getStreamInfo` method (read back outlet metadata)

@@ -1,8 +1,12 @@
 # cordova-plugin-lsl
 
+[![CI](https://github.com/Mindfield-Biosystems-Ltd/cordova-plugin-lsl/actions/workflows/ci.yml/badge.svg)](https://github.com/Mindfield-Biosystems-Ltd/cordova-plugin-lsl/actions/workflows/ci.yml)
+[![Build Android](https://github.com/Mindfield-Biosystems-Ltd/cordova-plugin-lsl/actions/workflows/build-android.yml/badge.svg)](https://github.com/Mindfield-Biosystems-Ltd/cordova-plugin-lsl/actions/workflows/build-android.yml)
+[![Build iOS](https://github.com/Mindfield-Biosystems-Ltd/cordova-plugin-lsl/actions/workflows/build-ios.yml/badge.svg)](https://github.com/Mindfield-Biosystems-Ltd/cordova-plugin-lsl/actions/workflows/build-ios.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Cordova Android](https://img.shields.io/badge/Cordova--Android-%3E%3D14.0.0-green)](https://cordova.apache.org)
 [![Cordova iOS](https://img.shields.io/badge/Cordova--iOS-%3E%3D8.0.0-green)](https://cordova.apache.org)
+[![liblsl](https://img.shields.io/badge/liblsl-v1.17.5-blue)](https://github.com/sccn/liblsl)
 
 **Lab Streaming Layer (LSL) plugin for Apache Cordova.** Stream physiological biosignal data from mobile devices to LSL-compatible recording software like [LabRecorder](https://github.com/labstreaminglayer/App-LabRecorder).
 
@@ -35,7 +39,7 @@ This is the **first and only** Cordova plugin for LSL, enabling mobile biosignal
 | cordova-android | 14.0.0 | 14.0.0 |
 | cordova-ios | 8.0.0 | 8.0.0 |
 | Android | 10 (SDK 29) | 14 |
-| iOS | 13.0 | 17.x |
+| iOS | 13.0 | 26.x |
 
 ## Installation
 
@@ -288,7 +292,7 @@ See [examples/](examples/) for complete working examples.
 
 ## Building liblsl from Source
 
-Pre-built binaries are included in the plugin. To build from source:
+Pre-built binaries are built via GitHub Actions CI. To build from source locally:
 
 ```bash
 # Android (requires Android NDK)
