@@ -155,7 +155,8 @@ for arch in "${ARCHS[@]}"; do
 
         # Find the liblsl include directory
         lsl_include=$(find "${SRC_PATH}" -name "lsl_c.h" -type f -exec dirname {} \; | head -n 1)
-        lsl_lib_dir=$(dirname "${so_file}")
+        # Point to the OUTPUT directory where liblsl.so was already copied
+        lsl_lib_dir="${OUTPUT_DIR}/${arch}"
 
         jni_build_dir="${BUILD_ROOT}/build-jni-${arch}"
         rm -rf "${jni_build_dir}"

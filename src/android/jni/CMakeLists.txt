@@ -5,11 +5,15 @@ project(lsl_jni C)
 add_library(lsl_jni SHARED lsl_jni.c)
 
 # Link against liblsl (pre-built shared library)
-# The path is set by the Gradle build script
-find_library(LSL_LIB lsl PATHS ${LSL_LIB_DIR} NO_DEFAULT_PATH)
-if(NOT LSL_LIB)
-    message(FATAL_ERROR "liblsl.so not found in ${LSL_LIB_DIR}")
+# LSL_LIB_DIR is passed from the build script and points to the directory
+# containing the already-built liblsl.so for this architecture
+set(LSL_LIB_PATH "${LSL_LIB_DIR}/liblsl.so")
+if(NOT EXISTS "${LSL_LIB_PATH}")
+    message(FATAL_ERROR "liblsl.so not found at ${LSL_LIB_PATH}")
 endif()
 
+add_library(lsl SHARED IMPORTED)
+set_target_properties(lsl PROPERTIES IMPORTED_LOCATION "${LSL_LIB_PATH}")
+
 target_include_directories(lsl_jni PRIVATE ${LSL_INCLUDE_DIR})
-target_link_libraries(lsl_jni ${LSL_LIB} log)
+target_link_libraries(lsl_jni lsl log)

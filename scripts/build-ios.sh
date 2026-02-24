@@ -241,6 +241,7 @@ if [ "${device_is_framework}" = true ]; then
     # Create fat simulator framework
     FAT_SIM_DIR="${BUILD_ROOT}/install-ios-simulator-fat"
     rm -rf "${FAT_SIM_DIR}"
+    mkdir -p "${FAT_SIM_DIR}"
     cp -R "${sim_arm64_framework}" "${FAT_SIM_DIR}/lsl.framework"
 
     lipo -create \
