@@ -26,6 +26,7 @@ OUTPUT_DIR="${PROJECT_ROOT}/src/android/libs"
 
 ARCHS=("arm64-v8a" "armeabi-v7a" "x86_64")
 ANDROID_API_LEVEL=24
+JNI_SRC="${PROJECT_ROOT}/src/android/jni/lsl_jni.c"
 
 # ---------------------------------------------------------------------------
 # Checks
@@ -61,15 +62,15 @@ fi
 
 all_built=true
 for arch in "${ARCHS[@]}"; do
-    if [ ! -f "${OUTPUT_DIR}/${arch}/liblsl.so" ]; then
+    if [ ! -f "${OUTPUT_DIR}/${arch}/liblsl.so" ] || [ ! -f "${OUTPUT_DIR}/${arch}/liblsl_jni.so" ]; then
         all_built=false
         break
     fi
 done
 
 if [ "${all_built}" = true ]; then
-    echo "All liblsl Android libraries already exist. Skipping build."
-    echo "  To force a rebuild, delete: ${OUTPUT_DIR}/*/liblsl.so"
+    echo "All liblsl + JNI bridge Android libraries already exist. Skipping build."
+    echo "  To force a rebuild, delete: ${OUTPUT_DIR}/*/liblsl*.so"
     exit 0
 fi
 
@@ -144,6 +145,42 @@ for arch in "${ARCHS[@]}"; do
     cp "${so_file}" "${output_file}"
     echo "[${arch}] Installed: ${output_file}"
     echo "  Size: $(du -h "${output_file}" | cut -f1)"
+
+    # -----------------------------------------------------------------------
+    # Build JNI bridge (liblsl_jni.so) linking against the freshly built liblsl
+    # -----------------------------------------------------------------------
+    jni_output="${OUTPUT_DIR}/${arch}/liblsl_jni.so"
+    if [ -f "${JNI_SRC}" ]; then
+        echo "[${arch}] Building JNI bridge..."
+
+        # Find the liblsl include directory
+        lsl_include=$(find "${SRC_PATH}" -name "lsl_c.h" -type f -exec dirname {} \; | head -n 1)
+        lsl_lib_dir=$(dirname "${so_file}")
+
+        jni_build_dir="${BUILD_ROOT}/build-jni-${arch}"
+        rm -rf "${jni_build_dir}"
+        mkdir -p "${jni_build_dir}"
+
+        cmake -S "${PROJECT_ROOT}/src/android/jni" -B "${jni_build_dir}" \
+            -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN_FILE}" \
+            -DANDROID_ABI="${arch}" \
+            -DANDROID_NATIVE_API_LEVEL="${ANDROID_API_LEVEL}" \
+            -DANDROID_STL=c++_shared \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLSL_LIB_DIR="${lsl_lib_dir}" \
+            -DLSL_INCLUDE_DIR="${lsl_include}"
+
+        cmake --build "${jni_build_dir}" --config Release
+
+        jni_so=$(find "${jni_build_dir}" -name "liblsl_jni.so" -type f | head -n 1)
+        if [ -n "${jni_so}" ]; then
+            cp "${jni_so}" "${jni_output}"
+            echo "[${arch}] JNI bridge installed: ${jni_output}"
+            echo "  Size: $(du -h "${jni_output}" | cut -f1)"
+        else
+            echo "WARNING: JNI bridge .so not found for ${arch}"
+        fi
+    fi
 done
 
 # ---------------------------------------------------------------------------

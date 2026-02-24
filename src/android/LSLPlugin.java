@@ -52,12 +52,13 @@ public class LSLPlugin extends CordovaPlugin {
     // Background thread pool for blocking LSL operations
     private ExecutorService executor;
 
-    // Load native liblsl library
+    // Load native libraries: liblsl (core) + liblsl_jni (JNI bridge)
     static {
         try {
             System.loadLibrary("lsl");
+            System.loadLibrary("lsl_jni");
         } catch (UnsatisfiedLinkError e) {
-            Log.e(TAG, "Failed to load liblsl native library: " + e.getMessage());
+            Log.e(TAG, "Failed to load native libraries: " + e.getMessage());
         }
     }
 

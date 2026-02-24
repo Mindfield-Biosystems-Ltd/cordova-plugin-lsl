@@ -49,10 +49,22 @@
         <source-file src="src/android/libs/armeabi-v7a/liblsl.so" target-dir="libs/armeabi-v7a" />
         <source-file src="src/android/libs/x86_64/liblsl.so" target-dir="libs/x86_64" />
 
+        <!-- Pre-built JNI bridge libraries -->
+        <source-file src="src/android/libs/arm64-v8a/liblsl_jni.so" target-dir="libs/arm64-v8a" />
+        <source-file src="src/android/libs/armeabi-v7a/liblsl_jni.so" target-dir="libs/armeabi-v7a" />
+        <source-file src="src/android/libs/x86_64/liblsl_jni.so" target-dir="libs/x86_64" />
+
         <!-- JNI library loading configuration -->
         <lib-file src="src/android/libs/arm64-v8a/liblsl.so" arch="arm64-v8a" />
         <lib-file src="src/android/libs/armeabi-v7a/liblsl.so" arch="armeabi-v7a" />
         <lib-file src="src/android/libs/x86_64/liblsl.so" arch="x86_64" />
+        <lib-file src="src/android/libs/arm64-v8a/liblsl_jni.so" arch="arm64-v8a" />
+        <lib-file src="src/android/libs/armeabi-v7a/liblsl_jni.so" arch="armeabi-v7a" />
+        <lib-file src="src/android/libs/x86_64/liblsl_jni.so" arch="x86_64" />
+
+        <!-- JNI source (for reference and custom builds) -->
+        <source-file src="src/android/jni/lsl_jni.c" target-dir="src/de/mindfield/cordova/lsl/jni" />
+        <source-file src="src/android/jni/CMakeLists.txt" target-dir="src/de/mindfield/cordova/lsl/jni" />
 
     </platform>
 
