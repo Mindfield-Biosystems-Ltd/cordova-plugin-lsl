@@ -1,0 +1,8 @@
+scripts/
+docs/
+tests/
+examples/
+.github/
+.gitignore
+CONTRIBUTING.md
+*.sh

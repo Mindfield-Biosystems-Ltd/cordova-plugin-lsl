@@ -1,0 +1,10 @@
+{
+  "spec_dir": "tests",
+  "spec_files": [
+    "js/**/*.js"
+  ],
+  "helpers": [
+    "helpers/**/*.js"
+  ],
+  "random": false
+}

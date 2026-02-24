@@ -1,0 +1,63 @@
+{
+  "name": "cordova-plugin-lsl",
+  "version": "1.0.0",
+  "description": "Lab Streaming Layer (LSL) plugin for Apache Cordova. Stream physiological biosignal data from mobile devices to LSL-compatible recording software.",
+  "main": "www/lsl.js",
+  "types": "www/lsl.d.ts",
+  "cordova": {
+    "id": "cordova-plugin-lsl",
+    "platforms": [
+      "android",
+      "ios"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Mindfield-Biosystems-Ltd/cordova-plugin-lsl.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Mindfield-Biosystems-Ltd/cordova-plugin-lsl/issues"
+  },
+  "homepage": "https://github.com/Mindfield-Biosystems-Ltd/cordova-plugin-lsl#readme",
+  "keywords": [
+    "cordova",
+    "plugin",
+    "lsl",
+    "lab-streaming-layer",
+    "biosignal",
+    "neuroscience",
+    "eeg",
+    "eda",
+    "emg",
+    "biofeedback",
+    "neurofeedback",
+    "physiological",
+    "streaming",
+    "xdf",
+    "labrecorder",
+    "ecosystem:cordova",
+    "cordova-android",
+    "cordova-ios"
+  ],
+  "author": {
+    "name": "Mindfield Biosystems Ltd.",
+    "email": "info@mindfield.de",
+    "url": "https://www.mindfield.de"
+  },
+  "license": "MIT",
+  "engines": {
+    "cordovaDependencies": {
+      "1.0.0": {
+        "cordova": ">=10.0.0",
+        "cordova-android": ">=14.0.0",
+        "cordova-ios": ">=8.0.0"
+      }
+    }
+  },
+  "scripts": {
+    "test": "jasmine --config=tests/jasmine.json"
+  },
+  "devDependencies": {
+    "jasmine": "^5.1.0"
+  }
+}

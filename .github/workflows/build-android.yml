@@ -1,0 +1,98 @@
+name: Build Android liblsl
+
+on:
+  workflow_dispatch:
+    inputs:
+      liblsl_version:
+        description: 'liblsl version to build'
+        required: false
+        default: '1.17.5'
+  release:
+    types: [published]
+
+jobs:
+  build:
+    name: Build liblsl for Android
+    runs-on: ubuntu-latest
+
+    env:
+      LIBLSL_VERSION: ${{ github.event.inputs.liblsl_version || '1.17.5' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Android NDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set ANDROID_NDK_HOME
+        run: |
+          # The setup-android action provides ANDROID_HOME
+          # NDK is typically at $ANDROID_HOME/ndk/<version> or we can install a specific one
+          if [ -z "${ANDROID_NDK_HOME:-}" ]; then
+            # Install NDK via sdkmanager
+            sdkmanager --install "ndk;26.3.11579264"
+            export ANDROID_NDK_HOME="${ANDROID_HOME}/ndk/26.3.11579264"
+          fi
+          echo "ANDROID_NDK_HOME=${ANDROID_NDK_HOME}" >> $GITHUB_ENV
+          echo "Using NDK: ${ANDROID_NDK_HOME}"
+          ls "${ANDROID_NDK_HOME}" || echo "NDK directory listing failed"
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq cmake ninja-build
+
+      - name: Remove existing .so files (force rebuild)
+        run: |
+          rm -f src/android/libs/arm64-v8a/liblsl.so
+          rm -f src/android/libs/armeabi-v7a/liblsl.so
+          rm -f src/android/libs/x86_64/liblsl.so
+
+      - name: Build liblsl for Android
+        run: |
+          chmod +x scripts/build-android.sh
+          scripts/build-android.sh
+
+      - name: Verify build outputs
+        run: |
+          echo "Checking build outputs..."
+          for arch in arm64-v8a armeabi-v7a x86_64; do
+            lib="src/android/libs/${arch}/liblsl.so"
+            if [ ! -f "${lib}" ]; then
+              echo "ERROR: Missing ${lib}"
+              exit 1
+            fi
+            echo "  ${arch}: $(du -h "${lib}" | cut -f1)"
+            file "${lib}"
+          done
+          echo ""
+          echo "All Android libraries built successfully."
+
+      - name: Upload arm64-v8a artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: liblsl-android-arm64-v8a
+          path: src/android/libs/arm64-v8a/liblsl.so
+          retention-days: 90
+
+      - name: Upload armeabi-v7a artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: liblsl-android-armeabi-v7a
+          path: src/android/libs/armeabi-v7a/liblsl.so
+          retention-days: 90
+
+      - name: Upload x86_64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: liblsl-android-x86_64
+          path: src/android/libs/x86_64/liblsl.so
+          retention-days: 90
+
+      - name: Upload all Android libs (combined)
+        uses: actions/upload-artifact@v4
+        with:
+          name: liblsl-android-all
+          path: src/android/libs/
+          retention-days: 90

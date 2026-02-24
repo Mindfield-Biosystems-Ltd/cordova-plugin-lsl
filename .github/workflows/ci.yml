@@ -1,0 +1,110 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Job 1: Lint + Unit Tests
+  # ---------------------------------------------------------------------------
+  test:
+    name: Lint & Unit Tests
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18, 20]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Jasmine tests
+        run: npm test
+
+  # ---------------------------------------------------------------------------
+  # Job 2: Validate plugin.xml
+  # ---------------------------------------------------------------------------
+  validate-plugin:
+    name: Validate plugin.xml
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check plugin.xml exists
+        run: |
+          if [ ! -f plugin.xml ]; then
+            echo "ERROR: plugin.xml not found"
+            exit 1
+          fi
+          echo "plugin.xml found"
+
+      - name: Validate XML syntax
+        run: |
+          # Install xmllint
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libxml2-utils
+
+          # Check well-formedness
+          xmllint --noout plugin.xml
+          echo "plugin.xml is well-formed XML"
+
+      - name: Validate plugin structure
+        run: |
+          # Check required elements exist
+          check_xpath() {
+            local xpath="$1"
+            local description="$2"
+            if xmllint --xpath "${xpath}" plugin.xml >/dev/null 2>&1; then
+              echo "  OK: ${description}"
+            else
+              echo "  FAIL: ${description} (xpath: ${xpath})"
+              exit 1
+            fi
+          }
+
+          echo "Checking plugin.xml structure..."
+
+          # Root element attributes
+          check_xpath "string(//*[local-name()='plugin']/@id)" "Plugin has id attribute"
+          check_xpath "string(//*[local-name()='plugin']/@version)" "Plugin has version attribute"
+
+          # Required child elements
+          check_xpath "//*[local-name()='name']" "Has <name> element"
+          check_xpath "//*[local-name()='description']" "Has <description> element"
+          check_xpath "//*[local-name()='js-module']" "Has <js-module> element"
+
+          # Platform definitions
+          check_xpath "//*[local-name()='platform'][@name='android']" "Has Android platform"
+          check_xpath "//*[local-name()='platform'][@name='ios']" "Has iOS platform"
+
+          echo ""
+          echo "All plugin.xml structure checks passed."
+
+      - name: Check version consistency
+        run: |
+          PLUGIN_VERSION=$(xmllint --xpath "string(//*[local-name()='plugin']/@version)" plugin.xml)
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+
+          echo "plugin.xml version: ${PLUGIN_VERSION}"
+          echo "package.json version: ${PACKAGE_VERSION}"
+
+          if [ "${PLUGIN_VERSION}" != "${PACKAGE_VERSION}" ]; then
+            echo "WARNING: Version mismatch between plugin.xml and package.json"
+            exit 1
+          fi
+
+          echo "Versions are consistent."

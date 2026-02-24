@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        id="cordova-plugin-lsl"
+        version="1.0.0">
+
+    <name>LSL</name>
+    <description>Lab Streaming Layer (LSL) plugin for Apache Cordova. Stream physiological biosignal data from mobile devices to LSL-compatible recording software.</description>
+    <license>MIT</license>
+    <keywords>cordova,lsl,lab-streaming-layer,biosignal,neuroscience,streaming</keywords>
+
+    <repo>https://github.com/Mindfield-Biosystems-Ltd/cordova-plugin-lsl.git</repo>
+    <issue>https://github.com/Mindfield-Biosystems-Ltd/cordova-plugin-lsl/issues</issue>
+
+    <engines>
+        <engine name="cordova" version=">=10.0.0" />
+        <engine name="cordova-android" version=">=14.0.0" />
+        <engine name="cordova-ios" version=">=8.0.0" />
+    </engines>
+
+    <!-- JavaScript API -->
+    <js-module src="www/lsl.js" name="LSL">
+        <clobbers target="LSL" />
+    </js-module>
+
+    <!-- ==================== Android ==================== -->
+    <platform name="android">
+
+        <config-file target="res/xml/config.xml" parent="/*">
+            <feature name="LSLPlugin">
+                <param name="android-package" value="de.mindfield.cordova.lsl.LSLPlugin" />
+                <param name="onload" value="false" />
+            </feature>
+        </config-file>
+
+        <!-- Permissions -->
+        <config-file target="AndroidManifest.xml" parent="/*">
+            <uses-permission android:name="android.permission.INTERNET" />
+            <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+            <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+        </config-file>
+
+        <!-- Java source files -->
+        <source-file src="src/android/LSLPlugin.java" target-dir="src/de/mindfield/cordova/lsl" />
+        <source-file src="src/android/LSLOutletWrapper.java" target-dir="src/de/mindfield/cordova/lsl" />
+
+        <!-- Pre-built liblsl native libraries -->
+        <source-file src="src/android/libs/arm64-v8a/liblsl.so" target-dir="libs/arm64-v8a" />
+        <source-file src="src/android/libs/armeabi-v7a/liblsl.so" target-dir="libs/armeabi-v7a" />
+        <source-file src="src/android/libs/x86_64/liblsl.so" target-dir="libs/x86_64" />
+
+        <!-- JNI library loading configuration -->
+        <lib-file src="src/android/libs/arm64-v8a/liblsl.so" arch="arm64-v8a" />
+        <lib-file src="src/android/libs/armeabi-v7a/liblsl.so" arch="armeabi-v7a" />
+        <lib-file src="src/android/libs/x86_64/liblsl.so" arch="x86_64" />
+
+    </platform>
+
+    <!-- ==================== iOS ==================== -->
+    <platform name="ios">
+
+        <config-file target="config.xml" parent="/*">
+            <feature name="LSLPlugin">
+                <param name="ios-package" value="LSLPlugin" />
+                <param name="onload" value="false" />
+            </feature>
+        </config-file>
+
+        <!-- Local Network Usage Description (required for LSL discovery) -->
+        <config-file target="*-Info.plist" parent="NSLocalNetworkUsageDescription">
+            <string>This app uses the local network to stream biosignal data via Lab Streaming Layer (LSL) to recording software on your computer.</string>
+        </config-file>
+
+        <!-- Bonjour services for LSL discovery -->
+        <config-file target="*-Info.plist" parent="NSBonjourServices">
+            <array>
+                <string>_lsl._tcp</string>
+            </array>
+        </config-file>
+
+        <!-- Source files -->
+        <header-file src="src/ios/LSLPlugin.h" />
+        <source-file src="src/ios/LSLPlugin.m" />
+
+        <!-- Pre-built liblsl xcframework -->
+        <podspec>
+            <config>
+                <source url="https://cdn.cocoapods.org/" />
+            </config>
+        </podspec>
+        <framework src="src/ios/liblsl.xcframework" custom="true" embed="true" />
+
+        <!-- Privacy Manifest -->
+        <resource-file src="src/ios/CDVLSLPlugin.bundle/PrivacyInfo.xcprivacy" target="CDVLSLPlugin.bundle/PrivacyInfo.xcprivacy" />
+
+    </platform>
+
+</plugin>

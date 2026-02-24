@@ -1,0 +1,79 @@
+name: Build iOS liblsl
+
+on:
+  workflow_dispatch:
+    inputs:
+      liblsl_version:
+        description: 'liblsl version to build'
+        required: false
+        default: '1.17.5'
+  release:
+    types: [published]
+
+jobs:
+  build:
+    name: Build liblsl xcframework for iOS
+    runs-on: macos-14  # Apple Silicon runner (M1)
+
+    env:
+      LIBLSL_VERSION: ${{ github.event.inputs.liblsl_version || '1.17.5' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install CMake
+        run: |
+          # macOS runners typically have cmake, but ensure latest
+          if ! command -v cmake &>/dev/null; then
+            brew install cmake
+          fi
+          cmake --version
+
+      - name: Print Xcode info
+        run: |
+          xcodebuild -version
+          xcrun --show-sdk-path --sdk iphoneos
+          xcrun --show-sdk-path --sdk iphonesimulator
+
+      - name: Remove existing xcframework (force rebuild)
+        run: |
+          rm -rf src/ios/liblsl.xcframework
+
+      - name: Build liblsl for iOS
+        run: |
+          chmod +x scripts/build-ios.sh
+          scripts/build-ios.sh
+
+      - name: Verify xcframework
+        run: |
+          XCFW="src/ios/liblsl.xcframework"
+
+          if [ ! -d "${XCFW}" ]; then
+            echo "ERROR: xcframework not found at ${XCFW}"
+            exit 1
+          fi
+
+          echo "xcframework contents:"
+          find "${XCFW}" -type f | head -20
+
+          echo ""
+          echo "Info.plist:"
+          cat "${XCFW}/Info.plist"
+
+          echo ""
+          echo "Library architectures:"
+          for lib in $(find "${XCFW}" -name "*.dylib" -type f); do
+            echo "  ${lib}:"
+            lipo -info "${lib}"
+          done
+
+          echo ""
+          echo "xcframework built successfully."
+
+      - name: Upload xcframework artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: liblsl-ios-xcframework
+          path: src/ios/liblsl.xcframework/
+          retention-days: 90
