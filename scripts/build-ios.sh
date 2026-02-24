@@ -78,14 +78,77 @@ fi
 SRC_PATH="${BUILD_ROOT}/${LIBLSL_SRC_DIR}"
 
 # ---------------------------------------------------------------------------
+# Helper: find the built library (could be .dylib, .framework, or named lsl)
+# ---------------------------------------------------------------------------
+
+find_built_library() {
+    local search_dir="$1"
+    local lib_file=""
+
+    # liblsl may build as a framework (lsl.framework/lsl) on macOS/iOS
+    lib_file=$(find "${search_dir}" -path "*/lsl.framework/lsl" -type f 2>/dev/null | head -n 1)
+    if [ -n "${lib_file}" ]; then
+        echo "${lib_file}"
+        return
+    fi
+
+    # Or as liblsl.dylib
+    lib_file=$(find "${search_dir}" -name "liblsl.dylib" -type f 2>/dev/null | head -n 1)
+    if [ -n "${lib_file}" ]; then
+        echo "${lib_file}"
+        return
+    fi
+
+    # Or with version suffix
+    lib_file=$(find "${search_dir}" -name "liblsl.*.dylib" -type f 2>/dev/null | head -n 1)
+    if [ -n "${lib_file}" ]; then
+        echo "${lib_file}"
+        return
+    fi
+
+    # Or as a plain .a static lib
+    lib_file=$(find "${search_dir}" -name "liblsl.a" -type f 2>/dev/null | head -n 1)
+    if [ -n "${lib_file}" ]; then
+        echo "${lib_file}"
+        return
+    fi
+
+    echo ""
+}
+
+# ---------------------------------------------------------------------------
+# Helper: find headers directory
+# ---------------------------------------------------------------------------
+
+find_headers_dir() {
+    local search_dir="$1"
+    local headers_dir=""
+
+    # Framework headers
+    headers_dir=$(find "${search_dir}" -path "*/lsl.framework/Headers" -type d 2>/dev/null | head -n 1)
+    if [ -n "${headers_dir}" ]; then
+        echo "${headers_dir}"
+        return
+    fi
+
+    # Standard include dir
+    headers_dir=$(find "${search_dir}" -name "lsl_c.h" -type f 2>/dev/null | head -n 1)
+    if [ -n "${headers_dir}" ]; then
+        dirname "${headers_dir}"
+        return
+    fi
+
+    echo ""
+}
+
+# ---------------------------------------------------------------------------
 # Helper: build for a specific platform/arch
 # ---------------------------------------------------------------------------
 
 build_for_platform() {
     local platform_name="$1"
-    local cmake_system_name="$2"
-    local osx_architectures="$3"
-    local sdk_name="$4"
+    local osx_architectures="$2"
+    local sdk_name="$3"
 
     local build_dir="${BUILD_ROOT}/build-${platform_name}"
     local install_dir="${BUILD_ROOT}/install-${platform_name}"
@@ -101,36 +164,30 @@ build_for_platform() {
     sdk_path="$(xcrun --sdk "${sdk_name}" --show-sdk-path)"
 
     cmake -S "${SRC_PATH}" -B "${build_dir}" \
-        -DCMAKE_SYSTEM_NAME="${cmake_system_name}" \
+        -DCMAKE_SYSTEM_NAME=iOS \
         -DCMAKE_OSX_ARCHITECTURES="${osx_architectures}" \
         -DCMAKE_OSX_DEPLOYMENT_TARGET="${IOS_DEPLOYMENT_TARGET}" \
         -DCMAKE_OSX_SYSROOT="${sdk_path}" \
         -DCMAKE_BUILD_TYPE=Release \
         -DLSL_BUILD_STATIC=OFF \
-        -DLSL_NO_FANCY_LIBNAME=ON \
         -DCMAKE_INSTALL_PREFIX="${install_dir}" \
         -DCMAKE_INSTALL_NAME_DIR="@rpath"
 
     cmake --build "${build_dir}" --config Release --parallel "$(sysctl -n hw.ncpu)"
     cmake --install "${build_dir}" --config Release
 
-    # Locate the built dylib
-    local dylib_file
-    dylib_file=$(find "${install_dir}" -name "liblsl.dylib" -o -name "liblsl.*.dylib" | head -n 1)
+    local lib_file
+    lib_file=$(find_built_library "${install_dir}")
 
-    if [ -z "${dylib_file}" ]; then
-        # Also check for .so naming on some cmake versions
-        dylib_file=$(find "${install_dir}" -name "liblsl.*" -type f | head -n 1)
-    fi
-
-    if [ -z "${dylib_file}" ]; then
+    if [ -z "${lib_file}" ]; then
         echo "ERROR: Could not find liblsl library in ${install_dir}"
+        echo "Contents:"
         find "${install_dir}" -type f
         exit 1
     fi
 
-    echo "[${platform_name}] Built: ${dylib_file}"
-    echo "  Size: $(du -h "${dylib_file}" | cut -f1)"
+    echo "[${platform_name}] Built: ${lib_file}"
+    echo "  Size: $(du -h "${lib_file}" | cut -f1)"
 }
 
 # ---------------------------------------------------------------------------
@@ -138,65 +195,94 @@ build_for_platform() {
 # ---------------------------------------------------------------------------
 
 # 1) iOS device (arm64)
-build_for_platform "ios-device" "iOS" "arm64" "iphoneos"
+build_for_platform "ios-device" "arm64" "iphoneos"
 
 # 2) iOS simulator (arm64) - Apple Silicon Macs
-build_for_platform "ios-simulator-arm64" "iOS" "arm64" "iphonesimulator"
+build_for_platform "ios-simulator-arm64" "arm64" "iphonesimulator"
 
 # 3) iOS simulator (x86_64) - Intel Macs
-build_for_platform "ios-simulator-x86_64" "iOS" "x86_64" "iphonesimulator"
+build_for_platform "ios-simulator-x86_64" "x86_64" "iphonesimulator"
 
 # ---------------------------------------------------------------------------
-# Create fat simulator library (arm64 + x86_64)
-# ---------------------------------------------------------------------------
-
-echo "============================================="
-echo "  Creating fat simulator library"
-echo "============================================="
-
-FAT_SIM_DIR="${BUILD_ROOT}/install-ios-simulator-fat/lib"
-mkdir -p "${FAT_SIM_DIR}"
-
-sim_arm64_lib=$(find "${BUILD_ROOT}/install-ios-simulator-arm64" -name "liblsl.dylib" -o -name "liblsl.*.dylib" | head -n 1)
-sim_x86_64_lib=$(find "${BUILD_ROOT}/install-ios-simulator-x86_64" -name "liblsl.dylib" -o -name "liblsl.*.dylib" | head -n 1)
-
-if [ -z "${sim_arm64_lib}" ]; then
-    sim_arm64_lib=$(find "${BUILD_ROOT}/install-ios-simulator-arm64" -name "liblsl.*" -type f | head -n 1)
-fi
-if [ -z "${sim_x86_64_lib}" ]; then
-    sim_x86_64_lib=$(find "${BUILD_ROOT}/install-ios-simulator-x86_64" -name "liblsl.*" -type f | head -n 1)
-fi
-
-fat_sim_lib="${FAT_SIM_DIR}/liblsl.dylib"
-
-lipo -create \
-    "${sim_arm64_lib}" \
-    "${sim_x86_64_lib}" \
-    -output "${fat_sim_lib}"
-
-echo "Fat simulator library: ${fat_sim_lib}"
-lipo -info "${fat_sim_lib}"
-
-# ---------------------------------------------------------------------------
-# Create xcframework
+# Prepare libraries for xcframework creation
 # ---------------------------------------------------------------------------
 
 echo "============================================="
-echo "  Creating xcframework"
+echo "  Preparing libraries for xcframework"
 echo "============================================="
 
-device_lib=$(find "${BUILD_ROOT}/install-ios-device" -name "liblsl.dylib" -o -name "liblsl.*.dylib" | head -n 1)
-if [ -z "${device_lib}" ]; then
-    device_lib=$(find "${BUILD_ROOT}/install-ios-device" -name "liblsl.*" -type f | head -n 1)
+device_lib=$(find_built_library "${BUILD_ROOT}/install-ios-device")
+device_headers=$(find_headers_dir "${BUILD_ROOT}/install-ios-device")
+sim_arm64_lib=$(find_built_library "${BUILD_ROOT}/install-ios-simulator-arm64")
+sim_x86_64_lib=$(find_built_library "${BUILD_ROOT}/install-ios-simulator-x86_64")
+
+echo "Device lib: ${device_lib}"
+echo "Device headers: ${device_headers}"
+echo "Sim arm64 lib: ${sim_arm64_lib}"
+echo "Sim x86_64 lib: ${sim_x86_64_lib}"
+
+# Check if libraries are inside .framework bundles
+device_is_framework=false
+if [[ "${device_lib}" == *".framework/"* ]]; then
+    device_is_framework=true
 fi
 
 # Remove existing xcframework if present
 rm -rf "${XCFRAMEWORK_PATH}"
 
-xcodebuild -create-xcframework \
-    -library "${device_lib}" \
-    -library "${fat_sim_lib}" \
-    -output "${XCFRAMEWORK_PATH}"
+if [ "${device_is_framework}" = true ]; then
+    # liblsl built as Apple frameworks - use framework-based xcframework creation
+    echo "Detected framework-based build"
+
+    device_framework=$(echo "${device_lib}" | sed 's|/lsl$||')
+    sim_arm64_framework=$(echo "${sim_arm64_lib}" | sed 's|/lsl$||')
+    sim_x86_64_framework=$(echo "${sim_x86_64_lib}" | sed 's|/lsl$||')
+
+    # Create fat simulator framework
+    FAT_SIM_DIR="${BUILD_ROOT}/install-ios-simulator-fat"
+    rm -rf "${FAT_SIM_DIR}"
+    cp -R "${sim_arm64_framework}" "${FAT_SIM_DIR}/lsl.framework"
+
+    lipo -create \
+        "${sim_arm64_lib}" \
+        "${sim_x86_64_lib}" \
+        -output "${FAT_SIM_DIR}/lsl.framework/lsl"
+
+    echo "Fat simulator framework created"
+    lipo -info "${FAT_SIM_DIR}/lsl.framework/lsl"
+
+    xcodebuild -create-xcframework \
+        -framework "${device_framework}" \
+        -framework "${FAT_SIM_DIR}/lsl.framework" \
+        -output "${XCFRAMEWORK_PATH}"
+else
+    # liblsl built as dylibs - use library-based xcframework creation
+    echo "Detected dylib-based build"
+
+    # Create fat simulator dylib
+    FAT_SIM_DIR="${BUILD_ROOT}/install-ios-simulator-fat/lib"
+    mkdir -p "${FAT_SIM_DIR}"
+
+    fat_sim_lib="${FAT_SIM_DIR}/liblsl.dylib"
+    lipo -create \
+        "${sim_arm64_lib}" \
+        "${sim_x86_64_lib}" \
+        -output "${fat_sim_lib}"
+
+    echo "Fat simulator library: ${fat_sim_lib}"
+    lipo -info "${fat_sim_lib}"
+
+    # Build xcframework args
+    xcf_args=(-library "${device_lib}")
+    if [ -n "${device_headers}" ]; then
+        xcf_args+=(-headers "${device_headers}")
+    fi
+    xcf_args+=(-library "${fat_sim_lib}")
+
+    xcodebuild -create-xcframework \
+        "${xcf_args[@]}" \
+        -output "${XCFRAMEWORK_PATH}"
+fi
 
 # ---------------------------------------------------------------------------
 # Summary
@@ -209,8 +295,9 @@ echo "============================================="
 echo "  xcframework: ${XCFRAMEWORK_PATH}"
 echo ""
 echo "Contents:"
-find "${XCFRAMEWORK_PATH}" -name "*.dylib" -exec echo "  {}" \;
+find "${XCFRAMEWORK_PATH}" -type f -name "*.dylib" -o -name "lsl" | while read -r f; do
+    echo "  ${f}"
+    lipo -info "${f}" 2>/dev/null || true
+done
 echo ""
-echo "Framework info:"
-xcodebuild -checkFirstLaunchStatus 2>/dev/null || true
 echo "Done."

@@ -16,27 +16,49 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      LIBLSL_VERSION: ${{ github.event.inputs.liblsl_version || '1.17.5' }}
+      LIBLSL_VERSION: ${{ inputs.liblsl_version || '1.17.5' }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Android NDK
-        uses: android-actions/setup-android@v3
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
-      - name: Set ANDROID_NDK_HOME
+      - name: Setup Android SDK and NDK
         run: |
-          # The setup-android action provides ANDROID_HOME
-          # NDK is typically at $ANDROID_HOME/ndk/<version> or we can install a specific one
-          if [ -z "${ANDROID_NDK_HOME:-}" ]; then
-            # Install NDK via sdkmanager
-            sdkmanager --install "ndk;26.3.11579264"
-            export ANDROID_NDK_HOME="${ANDROID_HOME}/ndk/26.3.11579264"
+          # Install Android command-line tools if not present
+          if [ -z "${ANDROID_HOME:-}" ]; then
+            export ANDROID_HOME="${HOME}/android-sdk"
+            mkdir -p "${ANDROID_HOME}"
           fi
-          echo "ANDROID_NDK_HOME=${ANDROID_NDK_HOME}" >> $GITHUB_ENV
-          echo "Using NDK: ${ANDROID_NDK_HOME}"
-          ls "${ANDROID_NDK_HOME}" || echo "NDK directory listing failed"
+          echo "ANDROID_HOME=${ANDROID_HOME}" >> $GITHUB_ENV
+
+          # Install NDK via sdkmanager
+          yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --licenses 2>/dev/null || true
+          ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager "ndk;26.3.11579264" 2>/dev/null || \
+            sdkmanager "ndk;26.3.11579264" 2>/dev/null || true
+
+          # Find NDK
+          NDK_DIR="${ANDROID_HOME}/ndk/26.3.11579264"
+          if [ ! -d "${NDK_DIR}" ]; then
+            # Try to find any installed NDK
+            NDK_DIR=$(find "${ANDROID_HOME}/ndk" -maxdepth 1 -mindepth 1 -type d 2>/dev/null | sort -V | tail -n 1)
+          fi
+
+          if [ -z "${NDK_DIR}" ] || [ ! -d "${NDK_DIR}" ]; then
+            echo "ERROR: Could not find Android NDK"
+            echo "ANDROID_HOME contents:"
+            ls -la "${ANDROID_HOME}/" || true
+            ls -la "${ANDROID_HOME}/ndk/" || true
+            exit 1
+          fi
+
+          echo "ANDROID_NDK_HOME=${NDK_DIR}" >> $GITHUB_ENV
+          echo "Using NDK: ${NDK_DIR}"
 
       - name: Install build tools
         run: |
@@ -48,6 +70,9 @@ jobs:
           rm -f src/android/libs/arm64-v8a/liblsl.so
           rm -f src/android/libs/armeabi-v7a/liblsl.so
           rm -f src/android/libs/x86_64/liblsl.so
+          rm -f src/android/libs/arm64-v8a/liblsl_jni.so
+          rm -f src/android/libs/armeabi-v7a/liblsl_jni.so
+          rm -f src/android/libs/x86_64/liblsl_jni.so
 
       - name: Build liblsl for Android
         run: |
@@ -69,30 +94,12 @@ jobs:
           echo ""
           echo "All Android libraries built successfully."
 
-      - name: Upload arm64-v8a artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: liblsl-android-arm64-v8a
-          path: src/android/libs/arm64-v8a/liblsl.so
-          retention-days: 90
-
-      - name: Upload armeabi-v7a artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: liblsl-android-armeabi-v7a
-          path: src/android/libs/armeabi-v7a/liblsl.so
-          retention-days: 90
-
-      - name: Upload x86_64 artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: liblsl-android-x86_64
-          path: src/android/libs/x86_64/liblsl.so
-          retention-days: 90
-
-      - name: Upload all Android libs (combined)
+      - name: Upload all Android libs
         uses: actions/upload-artifact@v4
         with:
           name: liblsl-android-all
-          path: src/android/libs/
+          path: |
+            src/android/libs/arm64-v8a/*.so
+            src/android/libs/armeabi-v7a/*.so
+            src/android/libs/x86_64/*.so
           retention-days: 90
