@@ -58,6 +58,6 @@
     "test": "jasmine --config=tests/jasmine.json"
   },
   "devDependencies": {
-    "jasmine": "^5.1.0"
+    "jasmine": "^6.1.0"
   }
 }
