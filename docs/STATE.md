@@ -6,10 +6,10 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 1.0.0 |
+| Version | 1.1.0 |
 | Release Date | 2026-02-24 |
-| Status | Released |
-| npm | [cordova-plugin-lsl](https://www.npmjs.com/package/cordova-plugin-lsl) v1.0.0 |
+| Status | Released (GitHub + npm) |
+| npm | [cordova-plugin-lsl](https://www.npmjs.com/package/cordova-plugin-lsl) v1.1.0 |
 | GitHub | [Mindfield-Biosystems-Ltd/cordova-plugin-lsl](https://github.com/Mindfield-Biosystems-Ltd/cordova-plugin-lsl) |
 
 ## Dependency Versions
@@ -45,7 +45,7 @@
 | CI (GitHub Actions) | Green | CI, Android build, iOS build — all passing |
 | Android binaries | In repo | liblsl.so + liblsl_jni.so for arm64-v8a, armeabi-v7a, x86_64 |
 | iOS binaries | In repo | liblsl.xcframework for arm64 + simulators |
-| npm publish | Published | [v1.0.0 on npm](https://www.npmjs.com/package/cordova-plugin-lsl) |
+| npm publish | Published | [v1.1.0 on npm](https://www.npmjs.com/package/cordova-plugin-lsl) |
 
 ## Pre-built Binary Status
 
@@ -76,7 +76,7 @@ src/ios/liblsl.xcframework/
 
 ## Known Issues
 
-No known issues at this time.
+- None
 
 ## iOS 26 Notes
 
@@ -94,7 +94,13 @@ No known issues at this time.
 - [x] Publish to npm ✓
 - [x] Create v1.0.0 GitHub Release ✓
 
-### v1.1.0 (Minor)
+### v1.1.0 (Minor) - RELEASED
+- [x] Fix 5 critical bugs (version parsing, return types, cross-platform mismatches, null pointer)
+- [x] Fix 7 additional issues (JNI leaks, NULL checks, race condition, TypeScript types)
+- [x] Native push_chunk performance (10-100x faster for high-rate streams)
+- [x] LSL specification compliance review + documentation archive
+
+### v1.2.0 (Minor)
 - [ ] Add `getStreamInfo` method (read back outlet metadata)
 - [ ] Add `getOutletCount` method
 - [ ] Improve error messages with error codes
