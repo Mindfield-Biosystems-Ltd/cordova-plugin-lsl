@@ -2,32 +2,36 @@
  * eSense EMG (Electromyography) - LSL Streaming Example
  *
  * Streams simulated EMG data over LSL at 5 Hz with 2 channels:
- *   Channel 0: RMS Amplitude (microvolts, uV) - typically 5-500 uV
- *   Channel 1: Median Frequency (Hz) - typically 50-150 Hz
+ *   Channel 0: CH1 - RMS amplitude (microvolts, uV)
+ *   Channel 1: CH2 - RMS amplitude (microvolts, uV)
  *
- * RMS amplitude reflects muscle tension level.
- * Median frequency shifts with fatigue (decreases as muscle fatigues).
+ * The two channels correspond to two independent EMG electrodes
+ * that can be placed on different body positions (e.g., left/right).
+ *
+ * Note: The eSense App allows selecting CH1 only, CH2 only, or both.
+ * Adjust channelCount and metadata.channels accordingly:
+ *   - Both channels: channelCount=2, channels=[CH1, CH2]
+ *   - CH1 only:      channelCount=1, channels=[CH1]
+ *   - CH2 only:      channelCount=1, channels=[CH2]
  *
  * Usage:
  *   Include this file in your Cordova app after cordova.js.
- *   The stream will appear as "eSense_EMG" in LabRecorder.
+ *   The stream will appear as "eSense_Muscle" in LabRecorder.
  *   Add the device IP (shown in console) as a KnownPeer in lsl_api.cfg on your PC.
  *
- * Copyright (c) 2025 Mindfield Biosystems Ltd.
+ * Copyright (c) 2026 Mindfield Biosystems Ltd.
  */
 
 document.addEventListener('deviceready', function() {
 
     // --- Configuration ---
-    var STREAM_NAME  = 'eSense_EMG';
+    var STREAM_NAME  = 'eSense_Muscle';
     var SAMPLE_RATE  = 5;           // 5 Hz
     var PUSH_INTERVAL = 1000 / SAMPLE_RATE; // 200 ms
 
     // Simulation parameters
     var RMS_MIN = 5;      // Minimum RMS amplitude in uV (resting muscle)
     var RMS_MAX = 500;    // Maximum RMS amplitude in uV (strong contraction)
-    var FREQ_MIN = 50;    // Minimum median frequency in Hz
-    var FREQ_MAX = 150;   // Maximum median frequency in Hz
 
     var outletId = null;
     var pushTimer = null;
@@ -47,13 +51,13 @@ document.addEventListener('deviceready', function() {
         channelCount: 2,
         sampleRate: SAMPLE_RATE,
         channelFormat: 'float32',
-        sourceId: 'esense-emg-001',
+        sourceId: 'esense-muscle-001',
         metadata: {
             manufacturer: 'Mindfield Biosystems',
-            device: 'eSense EMG',
+            device: 'eSense Muscle',
             channels: [
-                { label: 'RMS', unit: 'microvolts', type: 'EMG' },
-                { label: 'MedianFrequency', unit: 'Hz', type: 'EMG' }
+                { label: 'CH1', unit: 'microvolts', type: 'EMG' },
+                { label: 'CH2', unit: 'microvolts', type: 'EMG' }
             ]
         }
     }).then(function(id) {
@@ -69,61 +73,52 @@ document.addEventListener('deviceready', function() {
     /**
      * Start the sample push loop.
      * Pushes one 2-channel sample every 200 ms (5 Hz).
-     * Each sample contains [RMS amplitude, Median frequency].
+     * Each sample contains [CH1 RMS, CH2 RMS].
      */
     function startStreaming() {
-        console.log('[EMG] Streaming started at ' + SAMPLE_RATE + ' Hz (2 channels: RMS, MedianFreq)');
+        console.log('[EMG] Streaming started at ' + SAMPLE_RATE + ' Hz (2 channels: CH1, CH2)');
 
         pushTimer = setInterval(function() {
             var emg = simulateEMG();
 
-            // Push 2-channel sample: [RMS, MedianFrequency]
-            LSL.pushSample(outletId, [emg.rms, emg.medianFreq]).catch(function(err) {
+            // Push 2-channel sample: [CH1_RMS, CH2_RMS]
+            LSL.pushSample(outletId, [emg.ch1, emg.ch2]).catch(function(err) {
                 console.error('[EMG] Push failed:', err);
             });
         }, PUSH_INTERVAL);
     }
 
     /**
-     * Simulate EMG RMS amplitude and median frequency.
+     * Simulate EMG RMS amplitude for two independent channels.
      *
      * Simulates periodic muscle contractions:
-     * - RMS rises during contraction, falls during relaxation
-     * - Median frequency drops slightly as muscle fatigues (higher RMS = more fatigue)
+     * - CH1 and CH2 have slightly different patterns (independent electrodes)
+     * - Both values are RMS in microvolts
      *
-     * Real data would come from surface EMG electrodes via the eSense sensor.
+     * Real data would come from surface EMG electrodes via the eSense Muscle sensor.
      */
     var startTime = Date.now();
-    var currentRMS = 20; // Starting RMS in uV (light tension)
     function simulateEMG() {
         var elapsed = (Date.now() - startTime) / 1000;
 
-        // Simulate periodic contraction/relaxation cycles (~6 second cycle)
-        var contractionPhase = (Math.sin(2 * Math.PI * elapsed / 6) + 1) / 2; // 0..1
+        // CH1: Simulate periodic contraction/relaxation cycles (~6 second cycle)
+        var contraction1 = (Math.sin(2 * Math.PI * elapsed / 6) + 1) / 2; // 0..1
+        var ch1 = 15 + contraction1 * 200;
+        ch1 += (Math.random() - 0.5) * 10; // sensor noise
 
-        // RMS amplitude: baseline + contraction component + noise
-        var baseline = 15;
-        var contractionAmplitude = 200;
-        var rms = baseline + contractionPhase * contractionAmplitude;
-        rms += (Math.random() - 0.5) * 10; // sensor noise
+        // CH2: Similar pattern but slightly offset (independent electrode)
+        var contraction2 = (Math.sin(2 * Math.PI * elapsed / 6 + 0.5) + 1) / 2;
+        var ch2 = 12 + contraction2 * 180;
+        ch2 += (Math.random() - 0.5) * 10;
 
-        // Clamp
-        if (rms < RMS_MIN) rms = RMS_MIN;
-        if (rms > RMS_MAX) rms = RMS_MAX;
-        rms = Math.round(rms * 10) / 10;
+        // Clamp both channels
+        ch1 = Math.max(RMS_MIN, Math.min(RMS_MAX, ch1));
+        ch2 = Math.max(RMS_MIN, Math.min(RMS_MAX, ch2));
 
-        // Median frequency: inversely related to fatigue/RMS level
-        // Higher contraction -> slight frequency drop (fatigue effect)
-        var baseFreq = 100;
-        var fatigueShift = -contractionPhase * 20; // drops up to 20 Hz under load
-        var medianFreq = baseFreq + fatigueShift + (Math.random() - 0.5) * 5;
-
-        // Clamp
-        if (medianFreq < FREQ_MIN) medianFreq = FREQ_MIN;
-        if (medianFreq > FREQ_MAX) medianFreq = FREQ_MAX;
-        medianFreq = Math.round(medianFreq * 10) / 10;
-
-        return { rms: rms, medianFreq: medianFreq };
+        return {
+            ch1: Math.round(ch1 * 10) / 10,
+            ch2: Math.round(ch2 * 10) / 10
+        };
     }
 
     /**

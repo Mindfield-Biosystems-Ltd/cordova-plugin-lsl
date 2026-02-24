@@ -236,11 +236,11 @@ const emg = await LSL.createOutlet({
 });
 
 // Push data to each outlet independently
-await LSL.pushSample(eda, [3.7]);
-await LSL.pushSample(temp, [33.2]);
-await LSL.pushSample(pulse, [72, 833]);
-await LSL.pushSample(resp, [0.85]);
-await LSL.pushSample(emg, [45.2, 82.0]);
+await LSL.pushSample(eda, [3.7]);           // EDA in microsiemens
+await LSL.pushSample(temp, [33.2]);         // Temperature in °C
+await LSL.pushSample(pulse, [72, 833]);     // BPM, IBI in ms
+await LSL.pushSample(resp, [0.85]);         // Respiratory amplitude
+await LSL.pushSample(emg, [45.2, 38.7]);   // CH1 and CH2 RMS in µV
 
 // Cleanup
 await LSL.destroyAllOutlets();

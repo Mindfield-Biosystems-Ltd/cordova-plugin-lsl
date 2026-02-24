@@ -6,7 +6,7 @@
  *   2. Temperature (1 ch) - Skin temperature in degrees Celsius
  *   3. Pulse (2 ch)       - BPM and IBI (inter-beat interval)
  *   4. Respiration (1 ch) - Respiratory amplitude
- *   5. EMG (2 ch)         - RMS amplitude and median frequency
+ *   5. EMG (2 ch)         - Two independent EMG electrodes (RMS microvolts)
  *
  * Total: 5 LSL outlets, 7 channels across all streams.
  *
@@ -22,7 +22,7 @@
  *   Five streams will appear in LabRecorder (eSense_EDA, eSense_Temperature, etc.).
  *   Add the device IP (shown in console) as a KnownPeer in lsl_api.cfg on your PC.
  *
- * Copyright (c) 2025 Mindfield Biosystems Ltd.
+ * Copyright (c) 2026 Mindfield Biosystems Ltd.
  */
 
 document.addEventListener('deviceready', function() {
@@ -170,20 +170,20 @@ document.addEventListener('deviceready', function() {
             return id;
         }),
 
-        // --- EMG Outlet (2 channels) ---
+        // --- EMG Outlet (2 channels: two independent electrodes) ---
         LSL.createOutlet({
-            name: 'eSense_EMG',
+            name: 'eSense_Muscle',
             type: 'EMG',
             channelCount: 2,
             sampleRate: SAMPLE_RATE,
             channelFormat: 'float32',
-            sourceId: 'esense-emg-multi',
+            sourceId: 'esense-muscle-multi',
             metadata: {
                 manufacturer: 'Mindfield Biosystems',
-                device: 'eSense EMG',
+                device: 'eSense Muscle',
                 channels: [
-                    { label: 'RMS', unit: 'microvolts', type: 'EMG' },
-                    { label: 'MedianFrequency', unit: 'Hz', type: 'EMG' }
+                    { label: 'CH1', unit: 'microvolts', type: 'EMG' },
+                    { label: 'CH2', unit: 'microvolts', type: 'EMG' }
                 ]
             }
         }).then(function(id) {
@@ -230,7 +230,7 @@ document.addEventListener('deviceready', function() {
             buffers.respiration.push([simulateRespiration(elapsed)]);
 
             var emg = simulateEMG(elapsed);
-            buffers.emg.push([emg.rms, emg.medianFreq]);
+            buffers.emg.push([emg.ch1, emg.ch2]);
 
             // When buffer is full, push chunk and clear
             if (buffers.eda.length >= CHUNK_SIZE) {
@@ -313,18 +313,17 @@ document.addEventListener('deviceready', function() {
         return Math.round(signal * 10000) / 10000;
     }
 
-    // --- EMG Simulation ---
+    // --- EMG Simulation (2 independent electrodes) ---
     function simulateEMG(elapsed) {
-        var contraction = (Math.sin(2 * Math.PI * elapsed / 6) + 1) / 2;
-        var rms = 15 + contraction * 200 + (Math.random() - 0.5) * 10;
-        if (rms < 5) rms = 5;
-        if (rms > 500) rms = 500;
-        rms = Math.round(rms * 10) / 10;
-        var medianFreq = 100 - contraction * 20 + (Math.random() - 0.5) * 5;
-        if (medianFreq < 50) medianFreq = 50;
-        if (medianFreq > 150) medianFreq = 150;
-        medianFreq = Math.round(medianFreq * 10) / 10;
-        return { rms: rms, medianFreq: medianFreq };
+        var contraction1 = (Math.sin(2 * Math.PI * elapsed / 6) + 1) / 2;
+        var ch1 = 15 + contraction1 * 200 + (Math.random() - 0.5) * 10;
+        ch1 = Math.max(5, Math.min(500, ch1));
+        ch1 = Math.round(ch1 * 10) / 10;
+        var contraction2 = (Math.sin(2 * Math.PI * elapsed / 6 + 0.5) + 1) / 2;
+        var ch2 = 12 + contraction2 * 180 + (Math.random() - 0.5) * 10;
+        ch2 = Math.max(5, Math.min(500, ch2));
+        ch2 = Math.round(ch2 * 10) / 10;
+        return { ch1: ch1, ch2: ch2 };
     }
 
     // ========================================================================

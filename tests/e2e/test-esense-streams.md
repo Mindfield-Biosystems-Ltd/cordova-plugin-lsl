@@ -25,7 +25,7 @@ All 5 streams that the eSense app creates via cordova-plugin-lsl:
 | 2 | eSense_Temperature | Temperature | 1 | Temperature | celsius | 5 Hz |
 | 3 | eSense_Pulse | PPG | 2 | BPM, IBI | bpm, ms | 5 Hz |
 | 4 | eSense_Respiration | Respiration | 1 | Respiration | breaths_per_min | 5 Hz |
-| 5 | eSense_EMG | EMG | 2 | RMS, MedianFreq | uV, Hz | 5 Hz |
+| 5 | eSense_Muscle | EMG | 2 | CH1, CH2 | microvolts | 5 Hz |
 
 Total channels across all streams: **7**
 
@@ -104,18 +104,18 @@ function createAllStreams() {
         },
         {
             key: 'emg',
-            name: 'eSense_EMG',
+            name: 'eSense_Muscle',
             type: 'EMG',
             channelCount: 2,
             sampleRate: 5,
             channelFormat: 'float32',
-            sourceId: 'esense-emg-001',
+            sourceId: 'esense-muscle-001',
             metadata: {
                 manufacturer: 'Mindfield Biosystems',
-                device: 'eSense EMG',
+                device: 'eSense Muscle',
                 channels: [
-                    { label: 'RMS', unit: 'uV', type: 'EMG' },
-                    { label: 'MedianFreq', unit: 'Hz', type: 'EMG' }
+                    { label: 'CH1', unit: 'microvolts', type: 'EMG' },
+                    { label: 'CH2', unit: 'microvolts', type: 'EMG' }
                 ]
             }
         }
@@ -178,13 +178,14 @@ function startPushing() {
         LSL.pushSample(outlets.respiration, [respBase]);
     }, 200);
 
-    // EMG: RMS 10-100 uV, Median Freq 50-200 Hz
+    // EMG: CH1 and CH2 RMS 10-100 uV (two independent electrodes)
     var emgRms = 50.0;
     intervals.emg = setInterval(function () {
         emgRms += (Math.random() - 0.5) * 5;
         emgRms = Math.max(5.0, Math.min(200.0, emgRms));
-        var medFreq = 80 + (Math.random() - 0.5) * 20;
-        LSL.pushSample(outlets.emg, [emgRms, medFreq]);
+        var emgCh2 = emgRms * 0.85 + (Math.random() - 0.5) * 8; // slightly different
+        emgCh2 = Math.max(5.0, Math.min(200.0, emgCh2));
+        LSL.pushSample(outlets.emg, [emgRms, emgCh2]);
     }, 200);
 
     console.log('All 5 streams pushing at 5 Hz.');
@@ -202,7 +203,7 @@ startPushing();
    - [ ] `eSense_Temperature` (Temperature, 1ch, 5Hz, float32)
    - [ ] `eSense_Pulse` (PPG, 2ch, 5Hz, float32)
    - [ ] `eSense_Respiration` (Respiration, 1ch, 5Hz, float32)
-   - [ ] `eSense_EMG` (EMG, 2ch, 5Hz, float32)
+   - [ ] `eSense_Muscle` (EMG, 2ch, 5Hz, float32)
 4. Verify each stream's metadata by clicking on it in LabRecorder
 
 ### Step 4: Record for 1 Minute
@@ -251,7 +252,7 @@ expected_streams = {
     'eSense_Temperature': {'type': 'Temperature', 'channels': 1, 'rate': 5.0},
     'eSense_Pulse':       {'type': 'PPG',         'channels': 2, 'rate': 5.0},
     'eSense_Respiration': {'type': 'Respiration', 'channels': 1, 'rate': 5.0},
-    'eSense_EMG':         {'type': 'EMG',         'channels': 2, 'rate': 5.0},
+    'eSense_Muscle':         {'type': 'EMG',         'channels': 2, 'rate': 5.0},
 }
 
 found_streams = set()
@@ -389,7 +390,7 @@ Long-running stability test to verify no memory leaks, crashes, or stream degrad
 | eSense_Temperature | ~9,000 | 7,200 (80%) |
 | eSense_Pulse | ~9,000 | 7,200 (80%) |
 | eSense_Respiration | ~9,000 | 7,200 (80%) |
-| eSense_EMG | ~9,000 | 7,200 (80%) |
+| eSense_Muscle | ~9,000 | 7,200 (80%) |
 
 ### Duration Test Verification
 
@@ -487,5 +488,5 @@ for stream in data:
 
 ---
 
-*Last updated: 2025-02-24*
+*Last updated: 2026-02-24*
 *cordova-plugin-lsl v1.0.0*

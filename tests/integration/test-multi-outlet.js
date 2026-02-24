@@ -14,7 +14,7 @@
  *   - cordova-plugin-test-framework installed
  *   - Device has Wi-Fi enabled (LSL requires network)
  *
- * Copyright (c) 2025 Mindfield Biosystems Ltd.
+ * Copyright (c) 2026 Mindfield Biosystems Ltd.
  * Licensed under the MIT License.
  */
 
@@ -86,18 +86,18 @@ exports.defineAutoTests = function (it, expect, pending) {
             }
         },
         emg: {
-            name: 'eSense_EMG',
+            name: 'eSense_Muscle',
             type: 'EMG',
             channelCount: 2,
             sampleRate: 5,
             channelFormat: 'float32',
-            sourceId: 'esense-emg-test',
+            sourceId: 'esense-muscle-test',
             metadata: {
                 manufacturer: 'Mindfield Biosystems',
-                device: 'eSense EMG',
+                device: 'eSense Muscle',
                 channels: [
-                    { label: 'RMS', unit: 'uV', type: 'EMG' },
-                    { label: 'MedianFreq', unit: 'Hz', type: 'EMG' }
+                    { label: 'CH1', unit: 'microvolts', type: 'EMG' },
+                    { label: 'CH2', unit: 'microvolts', type: 'EMG' }
                 ]
             }
         }
@@ -166,7 +166,7 @@ exports.defineAutoTests = function (it, expect, pending) {
             temperature: [32.5],            // 1ch: celsius
             pulse: [72, 833],               // 2ch: bpm, ibi_ms
             respiration: [16.0],            // 1ch: breaths per minute
-            emg: [45.2, 125.0]             // 2ch: rms_uV, median_freq
+            emg: [45.2, 38.7]              // 2ch: CH1_uV, CH2_uV
         };
 
         var names = Object.keys(sampleData);
