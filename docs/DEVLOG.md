@@ -50,9 +50,51 @@ LabRecorder (PC)
 **Tests:** 77 Jasmine unit tests, all passing
 
 **Open Items:**
-- Pre-built binaries not yet in repo (CI builds need tuning)
-- npm not yet published
-- GitHub release tag not yet created
+- ~~Pre-built binaries not yet in repo~~ → Resolved in Session 2
+- ~~npm not yet published~~ → Resolved in Session 2
+- ~~GitHub release tag not yet created~~ → Resolved in Session 2
+
+---
+
+## 2026-02-24 — Post-Release: CI Fixes, Binaries, npm Publish
+
+### Session 2: Ship It
+
+**Context:** CI builds were failing after initial commit. Needed to fix builds, download artifacts, commit binaries, create GitHub Release, and publish to npm.
+
+**Issues Fixed:**
+
+| Issue | Root Cause | Fix |
+|-------|-----------|-----|
+| Android CI build failure | JNI CMakeLists.txt used `find_library` which searched wrong dirs | Rewrote to use IMPORTED target with explicit path to `liblsl.so` |
+| iOS CI build failure | `cp -R` failed because target directory didn't exist | Added `mkdir -p` before `cp -R` for fat simulator framework |
+| EMG sensor naming wrong | Assumed MedianFrequency as CH2 | Both channels are RMS microvolts (two independent electrodes) |
+| Product name wrong | Used "eSense_EMG" | Corrected to "eSense_Muscle" matching actual product name |
+
+**Actions Completed:**
+
+1. Fixed Android JNI CMake (`src/android/jni/CMakeLists.txt`) — IMPORTED target pattern
+2. Fixed iOS build script (`scripts/build-ios.sh`) — added `mkdir -p`
+3. Merged 4 Dependabot PRs (jasmine 6.1.0, checkout v6, setup-node v6, setup-java v5)
+4. Both CI builds verified green
+5. Corrected EMG → Muscle naming across examples, tests, e2e docs
+6. Downloaded pre-built binaries from CI and committed to repo
+7. Created GitHub Release v1.0.0 with full release notes
+8. Published to npm as cordova-plugin-lsl@1.0.0
+9. Revoked npm access tokens after publish
+10. Updated README (badges), STATE.md, CHANGELOG.md
+
+**Key Technical Finding:**
+- CMake `find_library` does not search custom paths reliably in NDK cross-compilation. Using `add_library(IMPORTED)` with `set_target_properties(IMPORTED_LOCATION)` is the correct pattern for pre-built shared libraries.
+
+**EMG/Muscle Sensor Clarification:**
+- eSense Muscle has two independent EMG electrodes (CH1, CH2)
+- Both measure RMS amplitude in microvolts
+- User can choose CH1 only, CH2 only, or both
+- Filter settings (narrow/medium/wide) are static configuration, not streamed data
+- `channelCount` is variable (1 or 2) depending on user selection
+
+**Result:** Plugin is fully released — npm package, GitHub Release, CI green, all docs updated. All v1.0.x roadmap items complete.
 
 ### Research Findings
 
