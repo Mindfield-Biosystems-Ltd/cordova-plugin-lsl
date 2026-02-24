@@ -19,9 +19,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added CI, Build Android, Build iOS status badges to README
 - Updated README iOS tested version to 26.x
 
+### Added
+- Pre-built liblsl v1.17.5 binaries from CI (Android 3 archs + iOS xcframework)
+
 ### Pending
-- Download CI artifacts and commit pre-built binaries to repo
 - npm publish to registry
+- GitHub Release v1.0.0
 
 ## [1.0.0] - 2026-02-24
 

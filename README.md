@@ -292,7 +292,7 @@ See [examples/](examples/) for complete working examples.
 
 ## Building liblsl from Source
 
-Pre-built binaries are built via GitHub Actions CI. To build from source locally:
+Pre-built binaries are included in the plugin. To rebuild from source:
 
 ```bash
 # Android (requires Android NDK)

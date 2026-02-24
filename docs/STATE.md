@@ -43,28 +43,30 @@
 | Integration Tests | Done | 3 test files |
 | E2E Guides | Done | 2 markdown files |
 | CI (GitHub Actions) | Green | CI, Android build, iOS build — all passing |
-| Android binaries | CI builds | liblsl.so + liblsl_jni.so for arm64-v8a, armeabi-v7a, x86_64 |
-| iOS binaries | CI builds | liblsl.xcframework for arm64 + simulators |
-| npm publish | Not started | After binaries are committed to repo |
+| Android binaries | In repo | liblsl.so + liblsl_jni.so for arm64-v8a, armeabi-v7a, x86_64 |
+| iOS binaries | In repo | liblsl.xcframework for arm64 + simulators |
+| npm publish | Not started | Ready to publish |
 
 ## Pre-built Binary Status
 
-Binaries are built via GitHub Actions CI. They are NOT committed to the repo (built on-demand).
+Pre-built binaries from liblsl v1.17.5 are committed to the repo.
 
 ### Android (.so files)
 ```
 src/android/libs/
-  arm64-v8a/liblsl.so       ← CI builds ✓
-  arm64-v8a/liblsl_jni.so   ← CI builds ✓
-  armeabi-v7a/liblsl.so     ← CI builds ✓
-  armeabi-v7a/liblsl_jni.so ← CI builds ✓
-  x86_64/liblsl.so          ← CI builds ✓
-  x86_64/liblsl_jni.so      ← CI builds ✓
+  arm64-v8a/liblsl.so       (9.6M) ✓
+  arm64-v8a/liblsl_jni.so   (48K)  ✓
+  armeabi-v7a/liblsl.so     (8.2M) ✓
+  armeabi-v7a/liblsl_jni.so (40K)  ✓
+  x86_64/liblsl.so          (9.3M) ✓
+  x86_64/liblsl_jni.so      (48K)  ✓
 ```
 
 ### iOS (.xcframework)
 ```
-src/ios/liblsl.xcframework/  ← CI builds ✓
+src/ios/liblsl.xcframework/
+  ios-arm64/lsl.framework/lsl                         (844K) ✓
+  ios-arm64_x86_64-simulator/lsl.framework/lsl        (1.7M) ✓
 ```
 
 ### How to Build
@@ -74,8 +76,7 @@ src/ios/liblsl.xcframework/  ← CI builds ✓
 
 ## Known Issues
 
-1. **Binaries not in repo:** CI builds succeed but binaries need to be downloaded and committed
-2. **No npm Package:** Not published to npm yet (blocked by binaries in repo)
+1. **No npm Package:** Not published to npm yet (ready to publish)
 
 ## iOS 26 Notes
 
@@ -89,7 +90,7 @@ src/ios/liblsl.xcframework/  ← CI builds ✓
 
 ### v1.0.x (Patches)
 - [x] Get CI builds working (Android + iOS) ✓
-- [ ] Download CI artifacts and commit binaries to repo
+- [x] Download CI artifacts and commit binaries to repo ✓
 - [ ] Publish to npm
 - [ ] Create v1.0.0 GitHub Release with attached binaries
 
