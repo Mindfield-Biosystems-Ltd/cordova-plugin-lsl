@@ -120,3 +120,50 @@ LabRecorder (PC)
 **cordova-lib 13.0.0 (Nov 2025):**
 - `cordova create plugin` command removed
 - Node.js >= 20.17.0 || >= 22.9.0 required
+
+---
+
+## 2026-02-24 — LSL Spec Compliance Review + v1.1.0 Release
+
+### Session 3: Review, Fix, Release
+
+**Context:** Comprehensive review of cordova-plugin-lsl v1.0.0 against official liblsl specification (C headers + 25 documentation pages). Multi-agent review team: Perplexity Web Research, Native Code Review, Cross-Platform Consistency, LSL Documentation scraping.
+
+**Bugs Found & Fixed (12 total):**
+
+| # | Severity | Bug | Fix |
+|---|----------|-----|-----|
+| 1 | CRITICAL | Library version parsing wrong (117 → "1.1.7" instead of "1.17") | 2-part parsing: `major = v/100, minor = v%100` |
+| 2 | CRITICAL | Push sample return values ignored (JNI declared void, should be int32_t) | Changed JNI functions to return jint, updated signatures |
+| 3 | CRITICAL | getLocalClock type mismatch (Android String, iOS Double) | Both return `{timestamp: double}` JSON, JS extracts number |
+| 4 | CRITICAL | hasConsumers type mismatch (Android int, iOS boolean) | JS normalizes with `!!result` |
+| 5 | CRITICAL | iOS null pointer in getWifiIPAddress | Added `ifa_addr != NULL` guard |
+| 6 | Non-critical | JNI string push local reference leak | Store jstring refs, reuse for release |
+| 7 | Non-critical | No NULL checks on Get*ArrayElements | Added `if (!data) return -4` |
+| 8 | Non-critical | pushChunk uses sample-loop instead of native lsl_push_chunk | 5 new JNI chunk functions, 10-100x faster |
+| 9 | Non-critical | iOS dead code: lslQueue | Retained as documentation |
+| 10 | Non-critical | TypeScript pushSample typed as number[] only | Changed to `number[] \| string[]` |
+| 11 | Non-critical | Android push/destroy race condition | `synchronized(wrapper)` + `isDestroyed()` checks |
+| 12 | Non-critical | int64 channel format not documented as unsupported | Documented as intentional limitation |
+
+**Performance Improvement:**
+- pushChunk: N JNI calls → 1 JNI call (native `lsl_push_chunk_*t()`)
+- Estimated 10-100x faster for high-rate streams (e.g. 1000 Hz EMG)
+
+**Documentation:**
+- 25 official LSL documentation pages archived in `docs/LSL-DOCUMENTATION/`
+- Review report: `docs/LSL-REVIEW-REPORT.md`
+- Release workflow documented in `.claude/CLAUDE.md`
+
+**Release Actions:**
+1. All 12 fixes implemented across 7 source files
+2. Version bumped to 1.1.0 (package.json + plugin.xml)
+3. CHANGELOG.md updated with full v1.1.0 section
+4. Git commit + push to main
+5. GitHub Release v1.1.0 created with tag
+6. Published to npm as cordova-plugin-lsl@1.1.0
+7. CI builds triggered and all green (CI, Android build, iOS build)
+8. Downloaded v1.1.0 CI artifacts and replaced pre-built binaries in repo
+9. JNI bridge binaries now include new push_chunk functions (+12K arm64, +4K armv7, +8K x86_64)
+
+**Key Insight:** Always verify against liblsl C headers, not assumptions. The `lsl_library_version()` return format (major*100+minor) and `lsl_push_sample_*t()` return type (int32_t) were both documented in headers but misinterpreted in the original implementation.

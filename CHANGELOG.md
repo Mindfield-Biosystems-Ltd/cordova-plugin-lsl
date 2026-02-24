@@ -7,23 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
-- Android CI: JNI bridge CMake now uses IMPORTED target with direct path to liblsl.so
-- iOS CI: Added missing `mkdir -p` for fat simulator framework directory
-
 ### Changed
-- Bumped Jasmine from 5.x to 6.1.0 (Dependabot)
-- Bumped actions/checkout from v4 to v6 (Dependabot)
-- Bumped actions/setup-node from v4 to v6 (Dependabot)
-- Bumped actions/setup-java from v4 to v5 (Dependabot)
-- Added CI, Build Android, Build iOS status badges to README
-- Updated README iOS tested version to 26.x
-
-### Added
-- Pre-built liblsl v1.17.5 binaries from CI (Android 3 archs + iOS xcframework)
-
-- Published to npm as [cordova-plugin-lsl](https://www.npmjs.com/package/cordova-plugin-lsl)
-- GitHub Release [v1.0.0](https://github.com/Mindfield-Biosystems-Ltd/cordova-plugin-lsl/releases/tag/v1.0.0)
+- Rebuilt JNI bridge binaries (liblsl_jni.so) from v1.1.0 CI with new push_chunk functions and corrected return types
+- Published v1.1.0 to npm
 
 ## [1.1.0] - 2026-02-24
 

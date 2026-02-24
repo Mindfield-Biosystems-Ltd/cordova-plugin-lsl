@@ -188,6 +188,51 @@ gh run list --limit 5
 
 ---
 
+## Binary Rebuild (nach Code-Aenderungen an lsl_jni.c oder Build-Scripts)
+
+Wenn `src/android/jni/lsl_jni.c` oder `scripts/build-android.sh` / `scripts/build-ios.sh` geaendert werden,
+muessen die pre-built Binaries im Repo aktualisiert werden:
+
+```bash
+# 1. Aenderungen committen und pushen (triggert CI)
+git push origin main
+
+# 2. Build-Workflows manuell triggern (falls kein Release-Trigger)
+gh workflow run build-android.yml
+gh workflow run build-ios.yml
+
+# 3. Warten bis Builds gruen sind
+gh run list --workflow=build-android.yml --limit 1
+gh run list --workflow=build-ios.yml --limit 1
+
+# 4. Artifacts herunterladen
+mkdir -p _artifacts
+gh run download <RUN_ID_ANDROID> --dir _artifacts/android
+gh run download <RUN_ID_IOS> --dir _artifacts/ios
+
+# 5. Alte Binaries ersetzen
+# Android:
+for arch in arm64-v8a armeabi-v7a x86_64; do
+  cp _artifacts/android/liblsl-android-all/${arch}/*.so src/android/libs/${arch}/
+done
+
+# iOS:
+rm -rf src/ios/liblsl.xcframework
+cp -r _artifacts/ios/liblsl-ios-xcframework src/ios/liblsl.xcframework
+
+# 6. Aufraeumen, committen, pushen
+rm -rf _artifacts
+git add src/android/libs/ src/ios/liblsl.xcframework/
+git commit -m "build: update pre-built binaries from CI"
+git push origin main
+```
+
+**Artifact-Namen:**
+- Android: `liblsl-android-all` (enthält alle 3 Architekturen mit liblsl.so + liblsl_jni.so)
+- iOS: `liblsl-ios-xcframework` (enthält xcframework mit arm64 + simulator)
+
+---
+
 ## Wichtige Erkenntnisse (aus v1.1.0 Review)
 
 1. **Immer gegen liblsl Header verifizieren**, nicht gegen Annahmen
