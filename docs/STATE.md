@@ -8,8 +8,8 @@
 |-------|-------|
 | Version | 1.0.0 |
 | Release Date | 2026-02-24 |
-| Status | Released (CI builds green) |
-| npm | Not yet published |
+| Status | Released |
+| npm | [cordova-plugin-lsl](https://www.npmjs.com/package/cordova-plugin-lsl) v1.0.0 |
 | GitHub | [Mindfield-Biosystems-Ltd/cordova-plugin-lsl](https://github.com/Mindfield-Biosystems-Ltd/cordova-plugin-lsl) |
 
 ## Dependency Versions
@@ -45,7 +45,7 @@
 | CI (GitHub Actions) | Green | CI, Android build, iOS build — all passing |
 | Android binaries | In repo | liblsl.so + liblsl_jni.so for arm64-v8a, armeabi-v7a, x86_64 |
 | iOS binaries | In repo | liblsl.xcframework for arm64 + simulators |
-| npm publish | Not started | Ready to publish |
+| npm publish | Published | [v1.0.0 on npm](https://www.npmjs.com/package/cordova-plugin-lsl) |
 
 ## Pre-built Binary Status
 
@@ -76,7 +76,7 @@ src/ios/liblsl.xcframework/
 
 ## Known Issues
 
-1. **No npm Package:** Not published to npm yet (ready to publish)
+No known issues at this time.
 
 ## iOS 26 Notes
 
@@ -91,8 +91,8 @@ src/ios/liblsl.xcframework/
 ### v1.0.x (Patches)
 - [x] Get CI builds working (Android + iOS) ✓
 - [x] Download CI artifacts and commit binaries to repo ✓
-- [ ] Publish to npm
-- [ ] Create v1.0.0 GitHub Release with attached binaries
+- [x] Publish to npm ✓
+- [x] Create v1.0.0 GitHub Release ✓
 
 ### v1.1.0 (Minor)
 - [ ] Add `getStreamInfo` method (read back outlet metadata)

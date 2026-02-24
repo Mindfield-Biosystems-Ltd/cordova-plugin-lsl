@@ -1,5 +1,6 @@
 # cordova-plugin-lsl
 
+[![npm](https://img.shields.io/npm/v/cordova-plugin-lsl)](https://www.npmjs.com/package/cordova-plugin-lsl)
 [![CI](https://github.com/Mindfield-Biosystems-Ltd/cordova-plugin-lsl/actions/workflows/ci.yml/badge.svg)](https://github.com/Mindfield-Biosystems-Ltd/cordova-plugin-lsl/actions/workflows/ci.yml)
 [![Build Android](https://github.com/Mindfield-Biosystems-Ltd/cordova-plugin-lsl/actions/workflows/build-android.yml/badge.svg)](https://github.com/Mindfield-Biosystems-Ltd/cordova-plugin-lsl/actions/workflows/build-android.yml)
 [![Build iOS](https://github.com/Mindfield-Biosystems-Ltd/cordova-plugin-lsl/actions/workflows/build-ios.yml/badge.svg)](https://github.com/Mindfield-Biosystems-Ltd/cordova-plugin-lsl/actions/workflows/build-ios.yml)

@@ -22,9 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Pre-built liblsl v1.17.5 binaries from CI (Android 3 archs + iOS xcframework)
 
-### Pending
-- npm publish to registry
-- GitHub Release v1.0.0
+- Published to npm as [cordova-plugin-lsl](https://www.npmjs.com/package/cordova-plugin-lsl)
+- GitHub Release [v1.0.0](https://github.com/Mindfield-Biosystems-Ltd/cordova-plugin-lsl/releases/tag/v1.0.0)
 
 ## [1.0.0] - 2026-02-24
 
