@@ -95,7 +95,7 @@ jobs:
           echo "All Android libraries built successfully."
 
       - name: Upload all Android libs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: liblsl-android-all
           path: |
